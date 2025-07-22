@@ -14,6 +14,8 @@ void setup() {
 }
 
 void loop() {
+  // Diagnóstico: Mostre que o loop está rodando (pode comentar depois)
+  // Serial.println("[LOOP] rodando...");
   webinterface_loop();
   scheduler_loop();
 }

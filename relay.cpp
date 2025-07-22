@@ -32,5 +32,14 @@ void relay_set(int idx, bool state) {
 }
 
 void relay_toggle(int idx) {
-  relay_set(idx, !relayStates[idx]);
+    Serial.print("[RELAY_TOGGLE] Recebido idx=");
+    Serial.println(idx);
+    if (idx < 0 || idx >= NUM_RELAYS) {
+        Serial.println("[RELAY_TOGGLE] IDX fora do range!");
+        return;
+    }
+    relayStates[idx] = !relayStates[idx];
+    Serial.print("[RELAY_TOGGLE] Estado apos toggle: ");
+    Serial.println(relayStates[idx] ? "ON" : "OFF");
+    // ... resto da sua função ...
 }
