@@ -251,7 +251,7 @@ void handleRelayData() {
   for (int i=0; i<NUM_RELAYS; i++) {
     if (i>0) js += ",";
     js += "{";
-    js += "\"name\":\"" + htmlEscape(relays[i].name) + "\",";
+    js += "\"name\":\"" + relays[i].name + "\",";
     js += "\"type\":\"" + relays[i].type + "\",";
     js += "\"state\":" + String(relayStates[i] ? "true":"false");
     js += "}";
