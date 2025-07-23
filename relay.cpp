@@ -3,6 +3,7 @@
 
 const int relayPins[NUM_PHYSICAL] = {33, 13, 14};
 bool relayStates[NUM_RELAYS] = {0,0,0,0,0,0,0,0};
+bool relayManual[NUM_RELAYS] = {0,0,0,0,0,0,0,0}; // Adicionado: modo manual para cada relé
 
 RelayConfig relays[NUM_RELAYS] = {
   {"LED 1",       "Led"},
@@ -23,11 +24,10 @@ void relay_setup() {
 }
 
 void relay_set(int idx, bool state) {
+  if(idx < 0 || idx >= NUM_RELAYS) return;
+  relayStates[idx] = state;
   if(idx < NUM_PHYSICAL) {
-    relayStates[idx] = state;
     digitalWrite(relayPins[idx], state ? LOW : HIGH);
-  } else if(idx < NUM_RELAYS) {
-    relayStates[idx] = state;
   }
 }
 
@@ -39,7 +39,8 @@ void relay_toggle(int idx) {
         return;
     }
     relayStates[idx] = !relayStates[idx];
+    relayManual[idx] = true; // NOVO: ao acionar manualmente, ativa modo manual
     Serial.print("[RELAY_TOGGLE] Estado apos toggle: ");
     Serial.println(relayStates[idx] ? "ON" : "OFF");
-    // ... resto da sua função ...
+    relay_set(idx, relayStates[idx]);
 }

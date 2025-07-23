@@ -9,6 +9,9 @@
 extern const int relayPins[NUM_PHYSICAL];
 extern bool relayStates[NUM_RELAYS];
 
+// === ADIÇÃO: flag de modo manual para cada relé ===
+extern bool relayManual[NUM_RELAYS];
+
 struct RelayConfig {
   String name;
   String type; // "Led", "Rega", "Wavemaker", "Runoff"

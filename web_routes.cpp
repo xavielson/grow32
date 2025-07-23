@@ -5,7 +5,7 @@
 #include "ntpclock.h"
 #include "web_html.h"
 
-// Use NUM_RELAYS, MAX_EVENTS, relays, relayStates, schedules, scheduleCounts como já definidos nos outros arquivos
+// Use NUM_RELAYS, MAX_EVENTS, relays, relayStates, relayManual, schedules, scheduleCounts como já definidos nos outros arquivos
 WebServer server(80);
 
 // ---- Handlers ----
@@ -18,7 +18,10 @@ void handleRelayData()      {
     js += "{";
     js += "\"name\":\"" + htmlEscape(relays[i].name) + "\",";
     js += "\"type\":\"" + relays[i].type + "\",";
-    js += "\"state\":" + String(relayStates[i] ? "true":"false");
+    js += "\"state\":" + String(relayStates[i] ? "true":"false") + ",";
+    js += "\"num_sched\":" + String(scheduleCounts[i]) + ",";
+    bool isManual = relayManual[i] || (scheduleCounts[i] == 0);
+    js += "\"manual\":" + String(isManual ? "true":"false");
     js += "}";
   }
   js += "]";
@@ -108,6 +111,17 @@ void handleDelSched()       {
   server.send(200,"text/plain","OK");
 }
 
+// NOVO: rota para voltar ao modo automático
+void handleSetAuto() {
+    if (server.hasArg("rele")) {
+        int idx = server.arg("rele").toInt();
+        if (idx >= 0 && idx < NUM_RELAYS) {
+            relayManual[idx] = false;
+        }
+    }
+    server.send(200, "text/plain", "OK");
+}
+
 // -- Setup rotas --
 void setupWebRoutes() {
   server.on("/", handleRoot);
@@ -118,6 +132,7 @@ void setupWebRoutes() {
   server.on("/getsched", handleGetSched);
   server.on("/addsched", handleAddSched);
   server.on("/delsched", handleDelSched);
+  server.on("/setauto", handleSetAuto); // Nova rota!
   server.begin();
 }
 

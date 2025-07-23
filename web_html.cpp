@@ -38,6 +38,28 @@ String getPage() {
         .horariosBox {display:flex;flex-direction:column;gap:8px;}
         .horarioLinha {display:flex;flex-direction:row;align-items:center;gap:6px;}
         input[type=number]{padding:4px 2px;}
+        /* === Estilo do botão MANUAL === */
+        .manual-btn {
+          color: #f44336;           /* Só muda a cor do texto! */
+          font-weight: bold;
+          /* NENHUM background, border, font-size, padding, etc */
+        }
+        .manual-blink {
+          animation: blink 0.5s steps(1) infinite;
+          color: #f44336;
+        }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.1; }
+        }
+        .sem-agendamento {
+        color: #888;
+        font-size: 12px;
+        font-style: italic;
+        font-weight: 400;
+        margin-left: 4px;
+        vertical-align: middle;
+        }
       </style>
     </head><body>
       <h2>Controle de Relés ESP32</h2>
@@ -110,7 +132,6 @@ String getPage() {
         let busyToggle = false;
         let fetchRelaysInterval = null;
         function fetchRelays() {
-          // Só atualiza se não estiver esperando toggle
           if (!busyToggle) {
             fetch('/relaydata').then(r=>r.json()).then(js=>{
               relayData = js;
@@ -118,11 +139,20 @@ String getPage() {
               let html = '';
               for (let i=0; i<js.length; i++) {
                 html += "<div class='card'>";
-                html += "<div class='label'>" + escapeHTML(js[i].name) + "</div>";
+                html += "<div class='label'>" + escapeHTML(js[i].name);
+                // NOVO: aviso "Sem agendamento"
+                if (js[i].num_sched !== undefined && js[i].num_sched === 0) {
+                  html += " <span class='sem-agendamento'>(Sem agendamento)</span>";
+                }
+                html += "</div>";
                 html += "<div style='color:#444;font-size:13px'>" + js[i].type + "</div>";
                 html += "<button class='"+(js[i].state?'on':'off')+(i>=3?' disabled':'')+"' onclick='toggleRelay("+i+")' "+(busyToggle?'disabled':'')+">"+(js[i].state?'ON':'OFF')+"</button> ";
                 html += "<button class='edit' onclick='editRelay("+i+")'>Editar</button>";
                 html += "<button onclick='openSched("+i+")'>Agendar</button>";
+                if (js[i].manual && js[i].num_sched > 0) {
+                  html += "<button class='manual-btn' onclick='setAuto("+i+")'><span class='manual-blink'>MANUAL</span></button>";
+                }
+
                 html += "</div>";
               }
               document.getElementById('relays').innerHTML = html;
@@ -242,6 +272,12 @@ String getPage() {
         }
         document.addEventListener('DOMContentLoaded', forceInputLimits);
         fetchRelays(); fetchClock();
+
+        // NOVO: Função para voltar para automático
+        function setAuto(idx) {
+          fetch('/setauto?rele=' + idx)
+            .then(r => fetchRelays());
+        }
       </script>
     </body></html>
   )rawliteral";

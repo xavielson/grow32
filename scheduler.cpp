@@ -1,5 +1,6 @@
 #include "scheduler.h"
 #include "ntpclock.h"
+#include "relay.h"
 
 ScheduleEvent schedules[NUM_RELAYS][MAX_EVENTS];
 int scheduleCounts[NUM_RELAYS] = {0};
@@ -30,6 +31,7 @@ void processSchedules() {
     bool liga = false;
     for(int j=0; j<scheduleCounts[i]; j++) {
       ScheduleEvent& ev = schedules[i][j];
+      // Se evento é para todos dias (0) ou para o dia atual (ajustando indices)
       if (ev.dayOfWeek==0 || ev.dayOfWeek==((dow==0)?1:dow+1)) {
         bool after_on =
             (hora > ev.h_on) ||
@@ -42,6 +44,9 @@ void processSchedules() {
         if (after_on && before_off) liga = true;
       }
     }
-    relay_set(i, liga);
+    // NOVO: só altera se NÃO estiver em modo manual
+    if (!relayManual[i]) {
+      relay_set(i, liga);
+    }
   }
 }

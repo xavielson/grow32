@@ -1,7 +1,7 @@
 #ifndef NTPCLOCK_H
 #define NTPCLOCK_H
 
-#include <time.h>   // <--- Esta linha é obrigatória para definir time_t
+#include <time.h>
 
 void ntp_setup();
 time_t ntp_now();
