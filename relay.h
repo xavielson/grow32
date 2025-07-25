@@ -4,7 +4,7 @@
 #include <Arduino.h> 
 
 #define NUM_RELAYS 8
-#define NUM_PHYSICAL 3
+#define NUM_PHYSICAL 8
 
 extern const int relayPins[NUM_PHYSICAL];
 extern bool relayStates[NUM_RELAYS];

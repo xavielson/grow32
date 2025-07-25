@@ -27,26 +27,33 @@ void processSchedules() {
   int minu = timeinfo.tm_min;
   int sec = timeinfo.tm_sec;
 
+  int agora = hora * 3600 + minu * 60 + sec;
+
   for(int i=0; i<NUM_RELAYS; i++) {
     bool liga = false;
     for(int j=0; j<scheduleCounts[i]; j++) {
       ScheduleEvent& ev = schedules[i][j];
       // Se evento é para todos dias (0) ou para o dia atual (ajustando indices)
       if (ev.dayOfWeek==0 || ev.dayOfWeek==((dow==0)?1:dow+1)) {
-        bool after_on =
-            (hora > ev.h_on) ||
-            (hora == ev.h_on && minu > ev.m_on) ||
-            (hora == ev.h_on && minu == ev.m_on && sec >= ev.s_on);
-        bool before_off =
-            (hora < ev.h_off) ||
-            (hora == ev.h_off && minu < ev.m_off) ||
-            (hora == ev.h_off && minu == ev.m_off && sec < ev.s_off);
-        if (after_on && before_off) liga = true;
+        int on = ev.h_on * 3600 + ev.m_on * 60 + ev.s_on;
+        int off = ev.h_off * 3600 + ev.m_off * 60 + ev.s_off;
+        if (on < off) {
+          // Intervalo normal no mesmo dia
+          if (agora >= on && agora < off) liga = true;
+        } else if (on > off) {
+          // Intervalo atravessa a meia-noite
+          if (agora >= on || agora < off) liga = true;
+        } else if (on == off) {
+          // Se on == off, considere 24h ligado!
+          liga = true;
+        }
       }
     }
-    // NOVO: só altera se NÃO estiver em modo manual
+    // Só altera se NÃO estiver em modo manual
     if (!relayManual[i]) {
       relay_set(i, liga);
     }
   }
 }
+
+

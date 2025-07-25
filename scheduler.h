@@ -3,7 +3,7 @@
 
 #include "relay.h"
 
-#define MAX_EVENTS 10
+#define MAX_EVENTS 300
 
 struct ScheduleEvent {
   int dayOfWeek; // 0=Todos, 1=Dom ... 7=Sab

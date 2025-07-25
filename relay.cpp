@@ -1,20 +1,21 @@
 #include "relay.h"
 #include <Arduino.h>
 
-const int relayPins[NUM_PHYSICAL] = {33, 13, 14};
+const int relayPins[NUM_PHYSICAL] = {16, 17, 18, 19, 21, 22, 23, 25};
 bool relayStates[NUM_RELAYS] = {0,0,0,0,0,0,0,0};
 bool relayManual[NUM_RELAYS] = {0,0,0,0,0,0,0,0}; // Adicionado: modo manual para cada relé
 
 RelayConfig relays[NUM_RELAYS] = {
-  {"LED 1",       "Led"},
-  {"Bomba 1",     "Rega"},
-  {"Wavemaker 1", "Wavemaker"},
-  {"Runoff 1",    "Runoff"},
-  {"Saída 5",     "Led"},
-  {"Saída 6",     "Led"},
-  {"Saída 7",     "Led"},
-  {"Saída 8",     "Led"}
+  {"Saída 1", "Clique editar para configurar saída"},
+  {"Saída 2", "Clique editar para configurar saída"},
+  {"Saída 3", "Clique editar para configurar saída"},
+  {"Saída 4", "Clique editar para configurar saída"},
+  {"Saída 5", "Clique editar para configurar saída"},
+  {"Saída 6", "Clique editar para configurar saída"},
+  {"Saída 7", "Clique editar para configurar saída"},
+  {"Saída 8", "Clique editar para configurar saída"}
 };
+
 
 void relay_setup() {
   for (int i = 0; i < NUM_PHYSICAL; i++) {
