@@ -20,12 +20,49 @@ String getPage() {
       <meta name='viewport' content='width=device-width, initial-scale=1' charset="UTF-8">
       <style>
         body{font-family:sans-serif;max-width:440px;margin:auto;}
-        button{width:80px;height:38px;font-size:15px;margin:7px;border-radius:8px;}
+        button {
+          width:75px;
+          height:32px;      /* diminuído de 38px para 28px */
+          font-size:15px;
+          margin:5px;       /* pode reduzir também o margin para ficar mais compacto */
+          border-radius:8px;
+          padding-top:5px;  /* opcional: diminui espaçamento interno */
+          padding-bottom:5px;
+        }
         .on{background:lime;}
         .off{background:#ccc;}
         .edit{background:#90caf9;}
         .label{font-weight:bold;}
-        .card{border:1px solid #ccc;border-radius:13px;margin:8px;padding:10px 8px 10px 8px;}
+        .card {
+          border: 1px solid #ccc;
+          border-radius: 13px;
+          max-width: 350px;   /* ou ajuste para seu layout, tipo 380~400px */
+          min-width: 0;
+          padding: 10px 7px 10px 7px;
+          margin: 8px auto;
+          box-sizing: border-box;
+          background: #fff;  /* caso queira garantir fundo branco */
+        }
+        .card-btns {
+          display: flex;
+          gap: 4px;
+          flex-wrap: nowrap;
+          align-items: center;
+          margin-top: 6px;
+          /* Tira qualquer quebra de linha */
+          white-space: nowrap;
+        }
+        .card-btns button, .card-btns .manual-btn {
+          min-width: 68px;
+          height: 30px;
+          font-size: 13px;
+          padding: 2px 5px;
+        }
+        .card button, .card .manual-btn {
+          margin: 0 3px;
+          /* já estão com width e height menores nos ajustes anteriores */
+        }
+
         #modal-bg,#sched-bg{position:fixed;left:0;top:0;width:100vw;height:100vh;background:#0009;display:none;z-index:3;}
         #modal,#sched{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
                background:white;padding:18px 18px 8px 18px;border-radius:18px;display:none;z-index:4;min-width:290px;}
@@ -49,10 +86,10 @@ String getPage() {
           margin-right: 6px;
         }
         .horarioLinha input[type="number"] {
-          width: 54px; /* todos iguais */
+          width: 48px; /* todos iguais */
           font-size: 16px;
           text-align: center;
-          padding: 4px 2px;
+          padding: 0px 0px;
         }
         .horarioLinha input[type="number"]:not(:last-child) {
           margin-right: 2px;
@@ -65,6 +102,13 @@ String getPage() {
         .manual-blink {
           animation: blink 0.5s steps(1) infinite;
           color: #f44336;
+        }
+        .btn-add {
+          height: 28px;
+          padding-top: 3px;
+          padding-bottom: 3px;
+          font-size: 15px;
+          min-width: 75px;
         }
         @keyframes blink {
           0%, 100% { opacity: 1; }
@@ -186,12 +230,12 @@ String getPage() {
                 <input type="number" min="0" max="59" id="ss_off" value="00">
               </div>
             </div>
-            <div style="margin-top:10px">
-              <button type="submit">Adicionar</button>
+            <div style="margin-top:10px;text-align:right;">
+              <button type="submit" class="btn-add">Adicionar</button>
             </div>
           </form>
         </div>
-        <div style="margin-top:10px;text-align:right">
+        <div style="margin-top:10px;text-align:center">
           <button onclick="closeSched()">Fechar</button>
         </div>
       </div>
@@ -227,8 +271,8 @@ String getPage() {
               }
               html += "</div>";
               html += "<div style='color:#444;font-size:13px'>" + js[i].type + "</div>";
+              html += "<div class='card-btns'>";
 
-              // Checa se o tipo é permitido:
               let tipo = js[i].type || "";
               let tipoValido = ["Led", "Rega", "Wavemaker", "Runoff"].includes(tipo);
 
@@ -241,7 +285,7 @@ String getPage() {
               // Botão Agendar
               html += "<button onclick='openSched("+i+")'"+(tipoValido ? "" : " disabled")+">Agendar</button>";
 
-              // BOTÃO MANUAL: mostra se manual==true e (tem agendamento OU é wavemaker)
+              // Botão MANUAL
               if (
                 js[i].manual &&
                 ["Led", "Rega", "Runoff", "Wavemaker"].includes(js[i].type) &&
@@ -250,7 +294,7 @@ String getPage() {
                 html += "<button class='manual-btn' onclick='setAuto("+i+")'><span class='manual-blink'>MANUAL</span></button>";
               }
 
-              html += "</div>";
+              html += "</div></div>";
             }
             document.getElementById('relays').innerHTML = html;
           });
@@ -265,13 +309,9 @@ String getPage() {
         if(fetchRelaysInterval) clearInterval(fetchRelaysInterval);
         fetchRelaysInterval = setInterval(fetchRelays, 1000);
         function toggleRelay(idx) {
-          // Atualiza o estado local imediatamente (optimistic)
-          if (relayData && relayData[idx]) {
-            relayData[idx].state = !relayData[idx].state;
-          }
-          fetch('/toggle?rele='+idx)
+          fetch('/toggle?rele=' + idx)
             .then(() => {
-              fetchRelays();
+              fetchRelays(); // Atualiza imediatamente após o comando
             })
             .catch(() => {
               fetchRelays();

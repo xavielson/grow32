@@ -12,11 +12,13 @@ O programa permite que o usuario agende horarios para ligar e desligar os dispos
 
 ## Arquivos
 
-- `main.ino`: Arquivo principal do projeto
+- `grow32.ino`: Arquivo principal do projeto
 - `ntpclock.h` / `ntpclock.cpp`: Código do relogio usando modo NTP
 - `relay.h` / `relay.cpp`: Código que controla os reles
 - `scheduler.h` / `scheduler.cpp`: Contem a logica de agendamento
-- `webinterface.h` / `webinterface.cpp`: Codigo da interface
+- `webinterface.h` / `webinterface.cpp`: Codigo de setup e loop da interface
+- `web_html.h` / `web_html.cpp`: HTML, JS, CSS
+- `web_routes.h` / `web_routes.cpp`: Web routes
 
 ## Dependências
 

@@ -30,13 +30,13 @@ void handleRelayData()      {
 void handleToggleRelay()    {
   if (server.hasArg("rele")) {
     int idx = server.arg("rele").toInt();
-    Serial.print("[TOGGLE] Pedido para trocar rele ");
-    Serial.println(idx);
+    //Serial.print("[TOGGLE] Pedido para trocar rele ");
+    //Serial.println(idx);
     relay_toggle(idx);
-    Serial.print("[TOGGLE] Novo estado: ");
-    Serial.println(relayStates[idx] ? "ON" : "OFF");
+    //Serial.print("[TOGGLE] Novo estado: ");
+    //Serial.println(relayStates[idx] ? "ON" : "OFF");
   } else {
-    Serial.println("[TOGGLE] Pedido recebido sem argumento 'rele'");
+    //Serial.println("[TOGGLE] Pedido recebido sem argumento 'rele'");
   }
   server.send(200, "text/plain", "OK");
 }

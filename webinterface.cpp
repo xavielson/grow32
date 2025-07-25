@@ -2,7 +2,7 @@
 #include <WiFi.h>
 #include "web_routes.h"
 
-const char* ssid = "MLPX";
+const char* ssid = "MLPX2";
 const char* password = "plx54321";
 
 void webinterface_setup() {
