@@ -6,14 +6,14 @@ bool relayStates[NUM_RELAYS] = {0,0,0,0,0,0,0,0};
 bool relayManual[NUM_RELAYS] = {0,0,0,0,0,0,0,0}; // Adicionado: modo manual para cada relé
 
 RelayConfig relays[NUM_RELAYS] = {
-  {"Saída 1", "Clique editar para configurar saída"},
-  {"Saída 2", "Clique editar para configurar saída"},
-  {"Saída 3", "Clique editar para configurar saída"},
-  {"Saída 4", "Clique editar para configurar saída"},
-  {"Saída 5", "Clique editar para configurar saída"},
-  {"Saída 6", "Clique editar para configurar saída"},
-  {"Saída 7", "Clique editar para configurar saída"},
-  {"Saída 8", "Clique editar para configurar saída"}
+  {"", ""},
+  {"", ""},
+  {"", ""},
+  {"", ""},
+  {"", ""},
+  {"", ""},
+  {"", ""},
+  {"", ""},
 };
 
 

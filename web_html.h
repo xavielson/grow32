@@ -4,6 +4,6 @@
 #include <Arduino.h>
 
 String htmlEscape(const String& str);
-String getPage();
+String getPage(bool debug);
 
 #endif

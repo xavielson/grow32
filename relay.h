@@ -15,7 +15,9 @@ extern bool relayManual[NUM_RELAYS];
 struct RelayConfig {
   String name;
   String type; // "Led", "Rega", "Wavemaker", "Runoff"
+  int wavemaker_mode = -1; // -1 = não é wavemaker, 0 em diante = modos possíveis
 };
+
 
 extern RelayConfig relays[NUM_RELAYS];
 

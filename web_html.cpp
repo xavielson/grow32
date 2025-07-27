@@ -14,507 +14,944 @@ String htmlEscape(const String& str) {
   return out;
 }
 
-String getPage() {
+String getPage(bool debug) {
+  
   String page = R"rawliteral(
-    <html><head>
-      <meta name='viewport' content='width=device-width, initial-scale=1' charset="UTF-8">
-      <style>
-        body{font-family:sans-serif;max-width:440px;margin:auto;}
-        button {
-          width:75px;
-          height:32px;      /* diminuído de 38px para 28px */
-          font-size:15px;
-          margin:5px;       /* pode reduzir também o margin para ficar mais compacto */
-          border-radius:8px;
-          padding-top:5px;  /* opcional: diminui espaçamento interno */
-          padding-bottom:5px;
-        }
-        .on{background:lime;}
-        .off{background:#ccc;}
-        .edit{background:#90caf9;}
-        .label{font-weight:bold;}
-        .card {
-          border: 1px solid #ccc;
-          border-radius: 13px;
-          max-width: 350px;   /* ou ajuste para seu layout, tipo 380~400px */
-          min-width: 0;
-          padding: 10px 7px 10px 7px;
-          margin: 8px auto;
-          box-sizing: border-box;
-          background: #fff;  /* caso queira garantir fundo branco */
-        }
-        .card-btns {
-          display: flex;
-          gap: 4px;
-          flex-wrap: nowrap;
-          align-items: center;
-          margin-top: 6px;
-          /* Tira qualquer quebra de linha */
-          white-space: nowrap;
-        }
-        .card-btns button, .card-btns .manual-btn {
-          min-width: 68px;
-          height: 30px;
-          font-size: 13px;
-          padding: 2px 5px;
-        }
-        .card button, .card .manual-btn {
-          margin: 0 3px;
-          /* já estão com width e height menores nos ajustes anteriores */
-        }
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body {
+      background: #f6f8fa;
+      font-family: sans-serif;
+      margin: 0;
+    }
+    #clock {
+      width: 100%;
+      max-width: 430px;
+      margin: 20px auto 12px auto;
+      text-align: center;
+      font-size: 1.23em;
+      font-family: monospace;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #333;
+      background: none;
+    }
+    .cards {
+      max-width: 430px;
+      margin: 0 auto 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 8px 12px;
+      box-shadow: 0 1px 5px #0001;
+      display: flex;
+      align-items: stretch;
+      cursor: pointer;
+      transition: box-shadow .18s;
+      position: relative;
+      min-height: 38px;
+    }
+    .card:hover {
+      box-shadow: 0 2px 14px #2a8cf822;
+    }
+    .icon {
+      width: 1.4em;
+      font-size: 1.3em;
+      display: flex;
+      align-items: center;      /* Centraliza verticalmente */
+      justify-content: center;
+      flex-shrink: 0;
+      /* margin-top: 2px;  Remova esta linha para alinhar melhor */
+    }
 
-        #modal-bg,#sched-bg{position:fixed;left:0;top:0;width:100vw;height:100vh;background:#0009;display:none;z-index:3;}
-        #modal,#sched{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
-               background:white;padding:18px 18px 8px 18px;border-radius:18px;display:none;z-index:4;min-width:290px;}
-        #modal label{display:inline-block;width:45px;text-align:right;}
-        #modal button,#sched button{width:auto;}
-        .disabled{opacity:0.55;pointer-events:none;}
-        #sched th{font-size:14px;}
-        #sched td{font-size:15px;}
-        .horariosBox {display:flex;flex-direction:column;gap:8px;}
-        input[type=number]{padding:4px 2px;}
-        .horarioLinha {
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          gap: 6px;
-        }
-        .horarioLinha span {
-          min-width: 110px; /* igual para ambos */
-          display: inline-block;
-          text-align: right;
-          margin-right: 6px;
-        }
-        .horarioLinha input[type="number"] {
-          width: 48px; /* todos iguais */
-          font-size: 16px;
-          text-align: center;
-          padding: 0px 0px;
-        }
-        .horarioLinha input[type="number"]:not(:last-child) {
-          margin-right: 2px;
-        }
-        .manual-btn {
-          color: #f44336; 
-          font-weight: bold;
-          font-size: 12px;
-        }
-        .manual-blink {
-          animation: blink 0.5s steps(1) infinite;
-          color: #f44336;
-        }
-        .btn-add {
-          height: 28px;
-          padding-top: 3px;
-          padding-bottom: 3px;
-          font-size: 15px;
-          min-width: 75px;
-        }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.1; }
-        }
-        .sem-agendamento {
-          color: #888;
-          font-size: 12px;
-          font-style: italic;
-          font-weight: 400;
-          margin-left: 4px;
-          vertical-align: middle;
-        }
-        button:disabled {
-          background: #eee !important;
-          color: #aaa !important;
-          border: 1px solid #ddd;
-          cursor: not-allowed;
-        }
-        #wavemaker-sched-bg {
-          position: fixed;
-          left: 0; top: 0;
-          width: 100vw; height: 100vh;
-          background: #0009;
-          display: none;
-          z-index: 3;
-        }
-        #wavemaker-sched {
-          position: fixed;
-          left: 50%; top: 50%;
-          transform: translate(-50%,-50%);
-          background: white;
-          padding: 18px 18px 8px 18px;
-          border-radius: 18px;
-          display: none;
-          z-index: 4;
-          min-width: 290px;
-        }
+    .labels {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+      margin-left: 10px;
+      min-width: 0;
+      gap: 0px;
+      padding-top: 2px;
+    }
+    .labels > div:first-child {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      margin-bottom: 2px;
+    }
+    .label-nome {
+      font-weight: 600;
+      font-size: 0.8em;
+      color: #333;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 1px;
+    }
+    .label-tipo {
+      font-size: 0.62em;
+      color: #98a;
+      margin-top: 0px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.1;
+    }
+    .status-linha {
+      font-size: 0.65em;
+      color: #678;
+      margin-top: 0px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-height: 1em;
+    }
+    .switch-num-wrap {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-left: 14px;
+    }
+    .channel-num {
+      width: 1.2em;
+      font-size: 1.15em;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+    }
+    .card.empty {
+      border: 2px dashed #cdd;
+      background: #f8fafc;
+      color: #b9bec5;
+      position: relative;
+      min-height: 38px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      cursor: pointer;
+    }
+    .card.empty .plus-area {
+      position: absolute;
+      left: 0;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .card.empty .plus-btn {
+      font-size: 1.2em;
+      background: none;
+      border: none;
+      outline: none;
+      color: #b9bec5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      user-select: none;
+      transition: none;
+    }
+    .card.empty:hover .plus-btn {
+      color: #b9bec5;
+      background: none;
+    }
+    .card.empty .switch-num-wrap {
+      margin-left: auto;
+      position: relative;
+      z-index: 2;
+    }
+    .card.empty .channel-num {
+      color: #bcc3cc;
+      font-weight: bold;
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 30px;
+      height: 16px;
+      vertical-align: middle;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      border-radius: 22px;
+      transition: .2s;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 2px;
+      bottom: 2px;
+      background: #fff;
+      border-radius: 50%;
+      transition: .2s;
+    }
+    input:checked + .slider {
+      background: #16c869;
+    }
+    input:checked + .slider:before {
+      transform: translateX(14px);
+    }
+    .toggle-switch input:not(:checked) + .slider {
+      background: #b71c1c;
+    }
+    #modal-bg {
+      position:fixed;
+      left:0;
+      top:0;
+      width:100vw;
+      height:100vh;
+      background:#0009;
+      display:none;
+      z-index:10;
+    }
+    #modal-config,
+    #modal-agendamentos {
+      position:fixed;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      background:white;
+      padding:20px 24px 18px 24px;
+      border-radius:18px;
+      display:none;
+      z-index:20;
+      min-width:320px;
+      max-width:92vw;
+    }
+    #modal-config label, #modal-agendamentos label {
+      font-size:15px;
+      font-weight:600;
+      margin-bottom:7px;
+      display:block;
+    }
+    #modal-config input[type="text"] {
+      width:100%;
+      padding:8px;
+      font-size:17px;
+      border:1px solid #c5cdd3;
+      border-radius:8px;
+      margin-bottom:14px;
+      box-sizing: border-box;
+    }
+    }
+    #modal-agendamentos input[type="text"], #modal-agendamentos input[type="number"] {
+      width:100%;
+      padding:8px;
+      font-size:17px;
+      border:1px solid #c5cdd3;
+      border-radius:8px;
+      //margin-bottom:14px;
+      box-sizing: border-box;
+    }
+    .type-list {
+      list-style:none;
+      margin:0;
+      padding:0;
+      display:flex;
+      flex-direction:column;
+      gap:7px;
+      margin-bottom:18px;
+    }
+    .type-list li {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border:1.5px solid #d2dae6;
+      border-radius:11px;
+      padding:11px 16px;
+      font-size:17px;
+      cursor:pointer;
+      background:#f7fafd;
+      transition:box-shadow .13s, border .13s, background .13s;
+    }
+    .type-list li.selected,
+    .type-list li:active {
+      border:2px solid #39f;
+      background:#e8f3fd;
+    }
+    .type-list li:hover:not(.selected) {
+      box-shadow:0 2px 12px #39f2;
+      border:1.5px solid #39f;
+      background:#e8f3fd;
+    }
+    .type-list .type-ico {
+      font-size:1.23em;
+      margin-left:16px;
+    }
+    .type-list .type-led { color:#e1be11; }
+    .type-list .type-rega { color:#21b4c5; }
+    .type-list .type-runoff { color:#8b6e54; }
+    .type-list .type-wavemaker { color:#27a162; }
+    .modal-actions {
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+    }
+    .modal-actions button {
+      font-size:16px;
+      padding:7px 22px;
+      border-radius:8px;
+      border:none;
+    }
+    .modal-actions .cancel-btn {
+      background:#eee;
+      color:#555;
+    }
+    .modal-actions .save-btn {
+      background:#39f;
+      color:#fff;
+      font-weight:700;
+    }
+    .modal-actions .save-btn:disabled {
+      background:#bbd2f3;
+      color:#eee;
+    }
+    #modal-agendamentos {
+      padding: 22px 20px 16px 20px;
+      min-width: 330px;
+      max-width: 99vw;
+    }
+    #modal-agendamentos h2 {
+      margin: 0 0 13px 0;
+      font-size: 1.12em;
+      font-weight: 700;
+      color: #222;
+      letter-spacing: 0.5px;
+    }
+    #schedDay {
+      min-width: 80px !important;
+      width: 80px !important;
+      height: 32px;
+      font-weight: 600;
+      font-size: 1em;      
+      padding: 5px 3px;
+      border: 1px solid #ccd6e1;
+      border-radius: 7px;
+    }
+    #schedDay, #schedDay option {
+      text-align: left;
+      color: #444;
+    }
+    .sched-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 13px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .sched-list li {
+      display: flex;
+      align-items: center;
+      background: #f4f8fc;
+      border-radius: 8px;
+      padding: 7px 11px 7px 13px;
+      font-size: 0.97em;
+      justify-content: space-between;
+      box-shadow: 0 1px 6px #bbb2;
+    }
+    .sched-list .sched-info {
+      display: flex;
+      gap: 17px;
+      align-items: center;
+      flex: 1 1 auto;
+    }
+    .sched-list .sched-diasemana {
+      font-weight: 700;
+      color: #445;
+      min-width: 44px;
+    }
+    .sched-list .sched-horas {
+      font-family: monospace;
+      letter-spacing: 1px;
+      color: #295;
+      min-width: 98px;
+      font-size: 1em;
+      font-weight: 600;
+    }
+    .sched-list button {
+      background: #f55;
+      color: #fff;
+      border: none;
+      padding: 4px 13px;
+      border-radius: 6px;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      margin-left: 8px;
+      transition: background .17s;
+    }
+    .sched-list button:hover {
+      background: #c12;
+    }
+    .add-sched-form {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      align-items: flex-start;
+      margin-top: 6px;
+      margin-bottom: 9px;
+    }
+    .add-sched-form > div {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 2px;
+    }
+    .add-sched-form select,
+    .add-sched-form input[type="number"] {
+      width: 3.2em !important;
+      max-width: 3.2em;
+      min-width: 3.2em;
+      font-size: 1em;
+      text-align: center;
+      padding: 3px 0;
+      border: 1px solid #ccd6e1;
+      border-radius: 7px;
+      box-sizing: border-box;
+      height: 32px;
+    }
+    .add-sched-form select {
+      min-width: 78px;
+      font-weight: 600;
+      font-size: 1em;
+      padding: 5px 7px;
+      border: 1px solid #ccd6e1;
+      border-radius: 7px;
+    }
+    .add-sched-form .add-btn,
+    .agendamentos-close-btn {
+      margin-top: 0;
+      margin-left: 0;
+    }
+    .add-sched-form .add-btn {
+      background: #39f;
+      color: #fff;
+      font-weight: 600;
+      padding: 7px 17px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background .17s;
+    }
+    .add-sched-form .add-btn:disabled {
+      background: #b9d3f9;
+      color: #eee;
+      cursor: not-allowed;
+    }
+    .agendamentos-close-btn {
+      background: #eee;
+      color: #333;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 22px;
+      font-size: 1em;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .agendamentos-close-btn:hover {
+      background: #ddd;
+    }
+    /* === PADRONIZAÇÃO DAS LABELS E DOS ":" NO MODAL AGENDAMENTOS === */
+    #modal-agendamentos .add-sched-form label {
+      font-size: 15px;
+      font-weight: 600;
+      color: #444;
+      margin: 0;
+      padding: 0;
+      text-align: left;
+      display: flex;
+      align-items: center;
+    }
+    #modal-agendamentos .add-sched-form label[for="schedHOn"],
+    #modal-agendamentos .add-sched-form label[for="schedHOff"] {
+      width: 58px;  /* ajuste esse valor até alinhar perfeitamente */
+      min-width: 0;  /* remove o min-width, só para garantir */
+      max-width: 98px;
+      display: flex;
+      align-items: center;
+      position: relative;
+      //top: -7px;   /* ajuste para centralizar, aumente para subir mais */
+    }
+    #modal-agendamentos .add-sched-form span {
+      font-size: 15px;
+      font-weight: 600;
+      color: #444;
+      display: flex;
+      align-items: center;
+      height: 32px;
+      line-height: 1;
+      padding: 0 0px;
+      position: relative;
+      //top: -7px; /* OU ajuste entre 0~2px até bater o alinhamento visual */
+    }
+    #modal-agendamentos .add-sched-form select {
+      font-size: 15px;
+    }
+    .clock-bar {
+      position: relative;
+      max-width: 430px;
+      margin: 20px auto 12px auto;
+      height: 40px; /* Ajuste se necessário, para acomodar o botão */
+    }
 
-        button.remove-x {
-          width: auto !important;
-          height: auto !important;
-          font-size: 16px !important;
-          font-weight: bold;
-          padding: 0 6px !important;
-          margin: 0 !important;
-          line-height: 1 !important;
-          vertical-align: middle;
-          background: none !important;
-          border: none !important;
-          color: #f44336;
-          cursor: pointer;
-          display: inline-block;
-        }
-        #sched-table tr, #sched-table td, #sched-table th {
-          padding: 2px 4px !important;
-          height: auto !important;
-        }        
-      </style>
-    </head><body>      
-      <h2>Controle de Relés ESP32</h2>
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-        <div id="clock" style="font-size:16px;"></div>
-        <div id="debug-row" style="display: none;">
-          <button style="font-size:12px; width:auto; padding:5px 12px;" onclick="debugSched()">Debug</button>
-        </div>
+    #clock {
+      text-align: center;
+      font-size: 1.23em;
+      font-family: monospace;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #333;
+      line-height: 40px; /* Igual à altura da .clock-bar, para centralizar verticalmente */
+    }
+
+    #debugBtn {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      margin-left: 0;
+      padding: 3px 12px;
+      background: #445;
+      color: #eee;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 1px 3px #0002;
+      cursor: pointer;
+      transition: background .14s;
+      display: none;
+    }
+    #debugBtn:hover {
+      background: #9ca3ad;
+      color: #eee;
+    }
+    #modal-wavemaker {
+      position:fixed;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      background:white;
+      padding:22px 20px 16px 20px;
+      border-radius:18px;
+      display:none;
+      z-index:21;
+      min-width:330px;
+      max-width:98vw;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="clock-bar">
+    <div id="clock"></div>
+    <button id="debugBtn" style="display:none;">Debug</button>
+  </div>
+  <div class="cards" id="cards"></div>
+  <div id="modal-bg"></div>
+  <div id="modal-config">
+    <form id="configForm" autocomplete="off">
+      <label for="nameInput">Nome do dispositivo</label>
+      <input type="text" id="nameInput" maxlength="24" autocomplete="off" required>
+      <label>Tipo</label>
+      <ul class="type-list" id="typeList">
+        <li data-type="Led"><span>Led</span> <span class="type-ico type-led">💡</span></li>
+        <li data-type="Rega"><span>Rega</span> <span class="type-ico type-rega">💧</span></li>
+        <li data-type="Runoff"><span>Runoff</span> <span class="type-ico type-runoff">🧺</span></li>
+        <li data-type="Wavemaker"><span>Wavemaker</span> <span class="type-ico type-wavemaker">💨</span></li>
+      </ul>
+      <div class="modal-actions">
+        <button type="button" class="cancel-btn" onclick="closeConfigModal()">Cancelar</button>
+        <button type="submit" class="save-btn" id="saveBtn" disabled>Salvar</button>
       </div>
-      <div id="relays"></div>
-      <div id="modal-bg"></div>
-      <div id="sched-bg"></div>
-      
-      <div id="modal">
-        <form onsubmit="saveConfig(event)">
-          <input type="hidden" id="relayIdx">
-          <div><label>Nome:</label>
-            <input id="name" maxlength="24"></div>
-          <div style="margin-top:7px"><label>Tipo:</label>
-            <select id="type" onchange="atualizaSchedFormTipo()">
-              <option value="Led">Led</option>
-              <option value="Rega">Rega</option>
-              <option value="Wavemaker">Wavemaker</option>
-              <option value="Runoff">Runoff</option>
-            </select>
-          </div>
-          <div style="margin-top:14px;text-align:right;">
-            <button type="button" onclick="closeModal()">Cancelar</button>
-            <button type="submit">Salvar</button>
-          </div>
-        </form>
+      <input type="hidden" id="relayIdx">
+    </form>
+  </div>
+  <!-- Modal Agendamentos -->
+  <div id="modal-agendamentos">
+    <ul class="sched-list" id="schedList"></ul>
+    <form class="add-sched-form" id="addSchedForm" autocomplete="off">
+      <div style="display:flex; align-items:center; gap:4px; margin-bottom:4px; margin-top:8px;">
+        <label for="schedDay" style="min-width:30px;">Dia:</label>
+        <select id="schedDay">
+          <option value="0">Todos</option>
+          <option value="1">Dom</option>
+          <option value="2">Seg</option>
+          <option value="3">Ter</option>
+          <option value="4">Qua</option>
+          <option value="5">Qui</option>
+          <option value="6">Sex</option>
+          <option value="7">Sáb</option>
+        </select>
       </div>
-      <div id="sched">
-        <div style="font-size:17px;font-weight:bold;margin-bottom:8px">Agendamentos: <span id="sched-nome"></span></div>
-        <table id="sched-table" border=0></table>
-        <div style="margin-top:6px">
-          <form onsubmit="addEvent(event)">
-            <div id="sched-dia-div" style="margin-bottom:5px">
-              <select id="sdia">
-                <option value="0">Todos</option>
-                <option value="1">Dom</option>
-                <option value="2">Seg</option>
-                <option value="3">Ter</option>
-                <option value="4">Qua</option>
-                <option value="5">Qui</option>
-                <option value="6">Sex</option>
-                <option value="7">Sab</option>
-              </select>
-            </div>
-            <div class="horariosBox">
-              <div class="horarioLinha">
-                <span>Hora Ligar:</span>
-                <input type="number" min="0" max="23" id="sh_on" value="00">:
-                <input type="number" min="0" max="59" id="sm_on" value="00">:
-                <input type="number" min="0" max="59" id="ss_on" value="00">
-              </div>
-              <div class="horarioLinha">
-                <span>Hora Desligar:</span>
-                <input type="number" min="0" max="23" id="sh_off" value="00">:
-                <input type="number" min="0" max="59" id="sm_off" value="00">:
-                <input type="number" min="0" max="59" id="ss_off" value="00">
-              </div>
-            </div>
-            <div style="margin-top:10px;text-align:right;">
-              <button type="submit" class="btn-add">Adicionar</button>
-            </div>
-          </form>
-        </div>
-        <div style="margin-top:10px;text-align:center">
-          <button onclick="closeSched()">Fechar</button>
-        </div>
+      <div style="display:flex; align-items:center; gap:4px;">
+        <label for="schedHOn" style="min-width:58px;">Liga:</label>
+        <input type="number" id="schedHOn" min="0" max="23" placeholder="H" maxlength="2" required style="width:2.2em;text-align:center;">
+        <span>:</span>
+        <input type="number" id="schedMOn" min="0" max="59" placeholder="M" maxlength="2" required style="width:2.2em;text-align:center;">
+        <span>:</span>
+        <input type="number" id="schedSOn" min="0" max="59" placeholder="S" maxlength="2" required style="width:2.2em;text-align:center;">
       </div>
-      <div id="wavemaker-sched-bg"></div>
-      <div id="wavemaker-sched">
-        <div style="font-size:17px;font-weight:bold;margin-bottom:8px">
-          Agendamento Wavemaker: <span id="wavemaker-nome"></span>
-        </div>
-        <form onsubmit="saveWavemakerSched(event)">
-          <label for="wavemaker-intervalo">Intervalo:</label>
-          <select id="wavemaker-intervalo"></select>
-          <div style="margin-top:10px; text-align:right;">
-            <button type="button" onclick="closeWavemakerSched()">Cancelar</button>
-            <button type="submit">Salvar</button>
-          </div>
-        </form>
+      <div style="display:flex; align-items:center; gap:4px; margin-bottom:10px;">
+        <label for="schedHOff" style="min-width:58px;">Desliga:</label>
+        <input type="number" id="schedHOff" min="0" max="23" placeholder="H" maxlength="2" required style="width:2.2em;text-align:center;">
+        <span>:</span>
+        <input type="number" id="schedMOff" min="0" max="59" placeholder="M" maxlength="2" required style="width:2.2em;text-align:center;">
+        <span>:</span>
+        <input type="number" id="schedSOff" min="0" max="59" placeholder="S" maxlength="2" required style="width:2.2em;text-align:center;">
       </div>
+      <div style="display:flex; gap:12px; margin-top:2px;">
+        <button type="submit" class="add-btn">Adicionar</button>
+        <button type="button" class="agendamentos-close-btn" onclick="closeAgendamentoModal()">Fechar</button>
+      </div>
+    </form>
+  </div>
+  <!-- Modal Agendamento Wavemaker -->
+  <div id="modal-wavemaker" style="display:none;">
+    <h2 style="margin-top:0; margin-bottom:16px; font-size:1.13em;">Agendamento Wavemaker</h2>
+    <ul class="type-list" id="wavemakerOptionList" style="margin-bottom:0;">
+      <li data-opt="0"><span>Sempre ligado</span></li>
+      <li data-opt="1"><span>15min ligado/15min desligado</span></li>
+      <li data-opt="2"><span>30min ligado/30min desligado</span></li>
+      <li data-opt="3"><span>1h ligado/1h desligado</span></li>
+      <li data-opt="4"><span>6h ligado/6h desligado</span></li>
+      <li data-opt="5"><span>12h ligado/12h desligado</span></li>
+      <li data-opt="debug" style="display:none;"><span>10s ligado/10s desligado</span></li>
+    </ul>
+  </div>
+  <div id="modal-bg-wavemaker" style="display:none;position:fixed;left:0;top:0;width:100vw;height:100vh;background:#0009;z-index:10;"></div>
 
-      <script>
-        let relayData = [];
-        let relayTypes = [];
-        let fetchRelaysInterval = null;
-        function fetchRelays() {
-          fetch('/relaydata').then(r=>r.json()).then(js=>{
-            relayData = js;
-            relayTypes = js.map(r => r.type);
-            let html = '';
-            for (let i=0; i<js.length; i++) {
-              html += "<div class='card'>";
-              html += "<div class='label'>" + escapeHTML(js[i].name);
-              if (js[i].num_sched !== undefined && js[i].num_sched === 0) {
-                html += " <span class='sem-agendamento'>(Sem agendamento)</span>";
-              }
-              html += "</div>";
-              html += "<div style='color:#444;font-size:13px'>" + js[i].type + "</div>";
-              html += "<div class='card-btns'>";
+  <script>
+    const DEBUG_MODE = )rawliteral";
+page += (debug ? "true" : "false");
+page += R"rawliteral(;
 
-              let tipo = js[i].type || "";
-              let tipoValido = ["Led", "Rega", "Wavemaker", "Runoff"].includes(tipo);
-
-              // Botão ON/OFF
-              html += "<button class='"+(js[i].state?'on':'off')+"' onclick='toggleRelay("+i+")'"+(tipoValido ? "" : " disabled")+">"+(js[i].state?'ON':'OFF')+"</button> ";
-
-              // Botão Editar
-              html += "<button class='edit' onclick='editRelay("+i+")'>Editar</button>";
-
-              // Botão Agendar
-              html += "<button onclick='openSched("+i+")'"+(tipoValido ? "" : " disabled")+">Agendar</button>";
-
-              // Botão MANUAL
-              if (
-                js[i].manual &&
-                ["Led", "Rega", "Runoff", "Wavemaker"].includes(js[i].type) &&
-                js[i].num_sched > 0
-              ) {
-                html += "<button class='manual-btn' onclick='setAuto("+i+")'><span class='manual-blink'>MANUAL</span></button>";
-              }
-
-              html += "</div></div>";
-            }
-            document.getElementById('relays').innerHTML = html;
-          });
-        }
-        function fetchClock() {
-          fetch('/clock').then(r=>r.text()).then(txt=>{
-            document.getElementById('clock').innerText = txt;
-          });
-        }
-        setInterval(fetchClock, 1000);
-        // Atualize o estado dos relés a cada 1s (não menos!)
-        if(fetchRelaysInterval) clearInterval(fetchRelaysInterval);
-        fetchRelaysInterval = setInterval(fetchRelays, 1000);
-        function toggleRelay(idx) {
-          fetch('/toggle?rele=' + idx)
-            .then(() => {
-              fetchRelays(); // Atualiza imediatamente após o comando
-            })
-            .catch(() => {
-              fetchRelays();
-            });
-        }
-        function editRelay(idx) {
-          document.getElementById('relayIdx').value = idx;
-          document.getElementById('name').value = relayData[idx].name;
-          document.getElementById('type').value = relayData[idx].type;
-          document.getElementById('modal-bg').style.display = 'block';
-          document.getElementById('modal').style.display = 'block';
-        }
-        function closeModal() {
-          document.getElementById('modal-bg').style.display = 'none';
-          document.getElementById('modal').style.display = 'none';
-        }
-        function saveConfig(ev) {
-          ev.preventDefault();
-          let idx = document.getElementById('relayIdx').value;
-          let name = document.getElementById('name').value;
-          let type = document.getElementById('type').value;
-          fetch('/setconfig?rele='+idx+'&name='+encodeURIComponent(name)+'&type='+encodeURIComponent(type))
-            .then(r=>{ closeModal(); fetchRelays(); });
-        }
-
-        // --- AGENDAMENTO ----
-        let schedRelay = 0;
-        function openSched(idx) {
-          let tipo = relayTypes[idx];
-          if (tipo == "Wavemaker") {
-            openWavemakerSched(idx);
-            return;
-          }
-          schedRelay = idx;
-          document.getElementById('sched-nome').innerText = relayData[idx].name;
-          atualizaSchedFormTipo();
-          fetch('/getsched?rele='+idx).then(r=>r.json()).then(list=>{
-            let html = "<tr><th>Dia</th><th>Liga</th><th>Desliga</th><th></th></tr>";
-            for (let i=0; i<list.length; i++) {
-              html += "<tr>";
-              html += "<td>"+(list[i].dia==0?"Todos":["Dom","Seg","Ter","Qua","Qui","Sex","Sab"][list[i].dia-1])+"</td>";
-              html += "<td>"+("0"+list[i].h_on).slice(-2)+":"+("0"+list[i].m_on).slice(-2)+":"+("0"+list[i].s_on).slice(-2)+"</td>";
-              html += "<td>"+("0"+list[i].h_off).slice(-2)+":"+("0"+list[i].m_off).slice(-2)+":"+("0"+list[i].s_off).slice(-2)+"</td>";
-              html += "<td><button class='remove-x' onclick='delEvent("+i+")' title='Remover'>&times;</button></td>";
-              html += "</tr>";
-            }
-            document.getElementById('sched-table').innerHTML = html;
-            document.getElementById('sched-bg').style.display = 'block';
-            document.getElementById('sched').style.display = 'block';
-          });
-        }
-        function closeSched() {
-          document.getElementById('sched-bg').style.display = 'none';
-          document.getElementById('sched').style.display = 'none';
-        }
-        function addEvent(ev) {
-          ev.preventDefault();
-          let d = relayTypes[schedRelay]=="Led" ? 0 : document.getElementById('sdia').value;
-          let hon = document.getElementById('sh_on').value;
-          let mon = document.getElementById('sm_on').value;
-          let son = document.getElementById('ss_on').value;
-          let hoff = document.getElementById('sh_off').value;
-          let moff = document.getElementById('sm_off').value;
-          let soff = document.getElementById('ss_off').value;
-          fetch('/addsched?rele='+schedRelay+'&dia='+d+'&h_on='+hon+'&m_on='+mon+'&s_on='+son+'&h_off='+hoff+'&m_off='+moff+'&s_off='+soff)
-            .then(r=>openSched(schedRelay));
-        }
-        function delEvent(idx) {
-          fetch('/delsched?rele='+schedRelay+'&idx='+idx)
-            .then(r=>openSched(schedRelay));
-        }
-        const wavemakerOptions = [
-          {label: "Sempre ligado", on: 24*60*60, off: 0},
-          {label: "15min ligado/15min desligado", on: 15*60, off: 15*60},
-          {label: "30min ligado/30min desligado", on: 30*60, off: 30*60},
-          {label: "1h ligado/1h desligado", on: 60*60, off: 60*60},
-          {label: "6h ligado/6h desligado", on: 6*60*60, off: 6*60*60},
-          {label: "12h ligado/12h desligado", on: 12*60*60, off: 12*60*60}
-        ];
-
-
-        // Se DEBUG_MODE, adiciona a opção 10s/10s:
-        let DEBUG_MODE = false; 
-        fetch('/debug').then(r=>r.text()).then(flag=>{DEBUG_MODE = (flag=="1");});
-
-        function openWavemakerSched(idx) {
-          schedRelay = idx;
-          document.getElementById('wavemaker-nome').innerText = relayData[idx].name;
-          let sel = document.getElementById('wavemaker-intervalo');
-          sel.innerHTML = "";
-
-          // Busca agendamento atual
-          fetch('/getsched?rele=' + idx).then(r => r.json()).then(list => {
-            // Descobre o intervalo salvo (considera só o primeiro evento do dia, que é o padrão do backend)
-            let intervaloSalvo = null;
-            if (list.length > 0) {
-              let ev = list[0];
-              let on = (ev.h_off * 3600 + ev.m_off * 60 + ev.s_off) - (ev.h_on * 3600 + ev.m_on * 60 + ev.s_on);
-              let off = 0;
-              if (list.length > 1) {
-                let next_ev = list[1];
-                off = (next_ev.h_on * 3600 + next_ev.m_on * 60 + next_ev.s_on) - (ev.h_off * 3600 + ev.m_off * 60 + ev.s_off);
-                if (off < 0) off += 24*3600; // Se passar de meia noite
-              }
-              intervaloSalvo = {on, off};
-            }
-
-            // Preenche opções do combo e seleciona a correspondente, se existir
-            let selectedIdx = 0;
-            wavemakerOptions.forEach((opt, i) => {
-              let option = document.createElement('option');
-              option.value = i;
-              option.text = opt.label;
-              if (intervaloSalvo && opt.on === intervaloSalvo.on && opt.off === intervaloSalvo.off) {
-                selectedIdx = i;
-              }
-              sel.add(option);
-            });
-            if (DEBUG_MODE) {
-              let option = document.createElement('option');
-              option.value = "debug";
-              option.text = "10s ligado/10s desligado";
-              if (intervaloSalvo && intervaloSalvo.on === 10 && intervaloSalvo.off === 10)
-                option.selected = true;
-              sel.add(option);
-            }
-            sel.selectedIndex = selectedIdx;
-
-            document.getElementById('wavemaker-sched-bg').style.display = "block";
-            document.getElementById('wavemaker-sched').style.display = "block";
-          });
-        }
-
-        function closeWavemakerSched() {
-          document.getElementById('wavemaker-sched-bg').style.display = "none";
-          document.getElementById('wavemaker-sched').style.display = "none";
-        }
-
-        function saveWavemakerSched(ev) {
-          ev.preventDefault();
-          let sel = document.getElementById('wavemaker-intervalo');
-          let optIdx = sel.value;
-          let on, off;
-          if(optIdx === "debug") {
-            on = 10; off = 10;
-          } else {
-            on = wavemakerOptions[optIdx].on;
-            off = wavemakerOptions[optIdx].off;
-          }
-          // Manda pro backend (intervalo em segundos):
-          fetch(`/setwavemakersched?rele=${schedRelay}&on=${on}&off=${off}`)
-            .then(()=>{ closeWavemakerSched(); fetchRelays(); });
-        }
-
-        function escapeHTML(str) {
-          return str.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-        }
-        function atualizaSchedFormTipo() {
-          setTimeout(()=>{
-            let idx = schedRelay;
-            let tipo = relayTypes[idx] || "Led";
-            let diaDiv = document.getElementById('sched-dia-div');
-            if (tipo == "Led") diaDiv.style.display = "none";
-            else diaDiv.style.display = "block";
-          }, 1);
-        }
-        function forceInputLimits() {
-          let fields = ['sh_on','sm_on','ss_on','sh_off','sm_off','ss_off'];
-          fields.forEach(id => {
-            let el = document.getElementById(id);
-            el.oninput = function() {
-              let min = parseInt(el.min), max = parseInt(el.max);
-              let v = parseInt(el.value);
-              if (isNaN(v)) el.value = min;
-              else if (v < min) el.value = min;
-              else if (v > max) el.value = max;
-              else el.value = ('0'+v).slice(-2);
-            }
-          });
-        }
-        document.addEventListener('DOMContentLoaded', forceInputLimits);
-        fetchRelays(); fetchClock();
-
-        // NOVO: Função para voltar para automático
-        function setAuto(idx) {
-          fetch('/setauto?rele=' + idx)
-            .then(r => fetchRelays());
-        }
-        function debugSched() {
-          fetch('/debugsched')
-            .then(()=> {
-              fetchRelays();
-            });
-        }
-        document.addEventListener('DOMContentLoaded', function() {
-          fetch('/debug')
-            .then(r => r.text())
-            .then(flag => {
-              if(flag === "1") document.getElementById('debug-row').style.display = '';
-            });
+    let relayData = Array.from({length: 8}, (_,i)=>({ name: "", type: "", state: false, num_sched: 0, manual: false }));
+    // Mostra o botão de debug se DEBUG_MODE for true
+    if (typeof DEBUG_MODE !== 'undefined' && DEBUG_MODE) {
+      document.getElementById("debugBtn").style.display = "block";
+      document.getElementById("debugBtn").onclick = function() {
+        fetch("/debugsched").then(r => {
+          if (r.ok) fetchRelays();
         });
-      </script>
-    </body></html>
+      };
+    } else {
+      // Se preferir, pode esconder explicitamente se não estiver no modo debug:
+      document.getElementById("debugBtn").style.display = "none";
+    }
+
+    function getStatusLinha(device) {
+      if (!device.horarios || device.horarios.length === 0) {
+        return "Sem agendamentos";
+      }
+      let next = device.horarios[0];
+      let acao = next.acao === "liga" ? "Liga" : "Desliga";
+      let dia  = next.dia === "hoje" ? "hoje" : next.dia;
+      return `${acao} ${dia} ${next.hora}`;
+    }
+
+    function getIcon(type) {
+      if (type === "LED" || type === "Led") return "💡";
+      if (type === "Rega") return "💧";
+      if (type === "Ventilador") return "🌀";
+      if (type === "Wavemaker") return "💨";
+      if (type === "Runoff") return "🧺";
+      return "🔌";
+    }
+
+    function renderCards(relayData) {
+      let html = "";
+      for (let i = 0; i < 8; i++) {
+        const d = relayData[i];
+        if (d && d.name && d.name.trim() !== "") {
+          html += `
+            <div class="card" data-idx="${i}">
+              <span class="icon">${getIcon(d.type)}</span>
+              <div class="labels">
+                <div>
+                  <span class="label-nome">${d.name}</span>
+                  <span class="label-tipo">${d.type}</span>
+                </div>
+                <div class="status-linha">${getStatusLinha(d)}</div>
+              </div>
+              <div class="switch-num-wrap">
+                <label class="toggle-switch" onclick="event.stopPropagation()">
+                  <input type="checkbox" data-idx="${i}" ${d.state ? "checked" : ""}>
+                  <span class="slider"></span>
+                </label>
+                <span class="channel-num">${i+1}</span>
+              </div>
+            </div>
+          `;
+        } else {
+          html += `
+          <div class="card empty" data-idx="${i}">
+            <div class="plus-area">
+              <span class="plus-btn">＋</span>
+            </div>
+            <div class="switch-num-wrap">
+              <span class="channel-num">${i+1}</span>
+            </div>
+          </div>
+          `;
+        }
+      }
+      document.getElementById("cards").innerHTML = html;
+      setupListeners();
+    }
+
+    function setupListeners() {
+      const cardsDiv = document.getElementById("cards");
+      cardsDiv.onclick = function(event) {
+        let card = event.target.closest('.card');
+        if (!card) return;
+        if (event.target.matches('input[type="checkbox"]')) return;
+        const idx = parseInt(card.getAttribute('data-idx'));
+        if (card.classList.contains('empty')) {
+          openConfigModal(idx);
+        } else {
+          // Checa o tipo do device aqui!
+          const tipo = relayData[idx]?.type || "";
+          if (tipo === "Wavemaker") {
+            openWavemakerModal(idx);
+          } else {
+            openAgendamentoModal(idx);
+          }
+        }
+      };
+      cardsDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.onclick = function(event) {
+          event.stopPropagation();
+          const idx = parseInt(cb.getAttribute('data-idx'));
+          const checked = cb.checked;
+          toggleRelay(idx, checked);
+        };
+      });
+    }
+
+    // ---- Modal moderno ----
+    let selectedType = null;
+    function openConfigModal(idx) {
+      document.getElementById('modal-bg').style.display = 'block';
+      document.getElementById('modal-config').style.display = 'block';
+      document.getElementById('nameInput').value = "";
+      document.getElementById('relayIdx').value = idx;
+      selectedType = null;
+      document.querySelectorAll('.type-list li').forEach(li => li.classList.remove('selected'));
+      updateSaveBtn();
+    }
+
+    function closeConfigModal() {
+      document.getElementById('modal-bg').style.display = 'none';
+      document.getElementById('modal-config').style.display = 'none';
+    }
+
+    document.querySelectorAll('.type-list li').forEach(li => {
+      li.onclick = function() {
+        document.querySelectorAll('.type-list li').forEach(li2 => li2.classList.remove('selected'));
+        li.classList.add('selected');
+        selectedType = li.getAttribute('data-type');
+        updateSaveBtn();
+      };
+    });
+
+    document.getElementById('nameInput').oninput = updateSaveBtn;
+    function updateSaveBtn() {
+      const nameOk = document.getElementById('nameInput').value.trim().length > 0;
+      document.getElementById('saveBtn').disabled = !(nameOk && selectedType);
+    }
+
+    document.getElementById('configForm').onsubmit = function(ev) {
+      ev.preventDefault();
+      const idx = document.getElementById('relayIdx').value;
+      const name = document.getElementById('nameInput').value.trim();
+      const type = selectedType;
+      if (!name || !type) return;
+      fetch('/setconfig?rele='+idx+'&name='+encodeURIComponent(name)+'&type='+encodeURIComponent(type))
+        .then(r=>{ closeConfigModal(); setTimeout(fetchRelays, 300); });
+    };
+
+    function fetchRelays() {
+      fetch("/relaydata").then(r=>r.json()).then(js=>{
+        relayData = js;
+        renderCards(relayData);
+      });
+    }
+
+    function toggleRelay(idx, checked) {
+      fetch("/toggle?rele=" + idx)
+        .then(() => { setTimeout(fetchRelays, 200); });
+    }
+
+    function fetchClock() {
+      fetch("/clock").then(r => r.text()).then(txt => {
+        let t = txt.replace(/^Hora atual:\s*/, '');
+        if (/^\d\d:\d\d:\d\d$/.test(t)) {
+          const dias = ["DOM","SEG","TER","QUA","QUI","SEX","SAB"];
+          const now = new Date();
+          const dia = dias[now.getDay()];
+          t = dia + " " + t;
+        }
+        document.getElementById("clock").textContent = t;
+      });
+    }
+    setInterval(fetchClock, 1000);
+    fetchClock();
+    setInterval(fetchRelays, 1000);
+
+    // ---- Modal Agendamento NOVO ----
+    let agendamentoIdx = null;
+    function openAgendamentoModal(idx) {
+      agendamentoIdx = idx;
+      document.getElementById('modal-bg').style.display = 'block';
+      document.getElementById('modal-agendamentos').style.display = 'block';
+      document.getElementById('addSchedForm').reset();
+      fetchAgendamentos(idx);
+
+      // Diferenciar para LED: esconder campo Dia
+      const tipo = relayData[idx]?.type || "";
+      const campoDia = document.querySelector('#addSchedForm [for="schedDay"]').parentElement;
+      if (tipo === "Led" || tipo === "LED") {
+        campoDia.style.display = "none";
+        document.getElementById('schedDay').value = "0";
+      } else {
+        campoDia.style.display = "";
+      }
+    }
+    function closeAgendamentoModal() {
+      document.getElementById('modal-bg').style.display = 'none';
+      document.getElementById('modal-agendamentos').style.display = 'none';
+      agendamentoIdx = null;
+    }
+    function fetchAgendamentos(idx) {
+      fetch('/getsched?rele=' + idx)
+        .then(r=>r.json())
+        .then(js => {
+          let html = '';
+          const dias = ["Todos","Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+          js.forEach((ev, i) => {
+            html += `<li>
+                <span class="sched-info">
+                  <span class="sched-diasemana">${dias[ev.dia]}</span>
+                  <span class="sched-horas">${pad2(ev.h_on)}:${pad2(ev.m_on)}:${pad2(ev.s_on)} ~ ${pad2(ev.h_off)}:${pad2(ev.m_off)}:${pad2(ev.s_off)}</span>
+                </span>
+                <button onclick="delAgendamento(${i})" title="Excluir">&#128465;</button>
+              </li>`;
+          });
+          document.getElementById('schedList').innerHTML = html || '<li style="color:#999;font-style:italic;">Nenhum agendamento cadastrado.</li>';
+        });
+    }
+    function pad2(n) {
+      return n.toString().padStart(2, "0");
+    }
+    function delAgendamento(evIdx) {
+      const idx = agendamentoIdx;
+      fetch(`/delsched?rele=${idx}&idx=${evIdx}`, {method:"POST"})
+        .then(()=>{ fetchAgendamentos(idx); });
+    }
+    document.getElementById('addSchedForm').onsubmit = function(ev) {
+      ev.preventDefault();
+      const idx = agendamentoIdx;
+      const dia = document.getElementById('schedDay').value;
+      const h_on = document.getElementById('schedHOn').value;
+      const m_on = document.getElementById('schedMOn').value;
+      const s_on = document.getElementById('schedSOn').value;
+      const h_off = document.getElementById('schedHOff').value;
+      const m_off = document.getElementById('schedMOff').value;
+      const s_off = document.getElementById('schedSOff').value;
+      fetch(`/addsched?rele=${idx}&dia=${dia}&h_on=${h_on}&m_on=${m_on}&s_on=${s_on}&h_off=${h_off}&m_off=${m_off}&s_off=${s_off}`)
+        .then(()=>{
+          fetchAgendamentos(idx);
+          // ATUALIZA O CARD DE TODOS OS RELÉS, INCLUINDO ON/OFF E STATUS-LINHA
+          fetchRelays();
+          document.getElementById('addSchedForm').reset();
+        });
+    }
+    // Abre o modal (chame essa função ao clicar em "Agendar" para Wavemaker)
+    let wavemakerIdx = null;
+
+    function openWavemakerModal(idx) {
+      wavemakerIdx = idx; // Salva o índice
+      document.getElementById('modal-bg-wavemaker').style.display = 'block';
+      document.getElementById('modal-wavemaker').style.display = 'block';
+
+      // Se for modo debug, mostra a opção extra
+      if (DEBUG_MODE)
+        document.querySelector('#wavemakerOptionList li[data-opt="debug"]').style.display = '';
+      else
+        document.querySelector('#wavemakerOptionList li[data-opt="debug"]').style.display = 'none';
+    }
+
+
+    // Fecha o modal
+    function closeWavemakerModal() {
+      document.getElementById('modal-bg-wavemaker').style.display = 'none';
+      document.getElementById('modal-wavemaker').style.display = 'none';
+      wavemakerIdx = null;
+    }
+
+    // Lógica de clique nas opções
+    document.querySelectorAll('#wavemakerOptionList li').forEach(li => {
+      li.onclick = function() {
+        let opt = li.getAttribute('data-opt');
+        // 'debug' para a opção extra; converte para 6 ou outro índice se quiser
+        let mode = (opt === "debug") ? 6 : parseInt(opt);
+        selectWavemakerOption(wavemakerIdx, mode);
+      }
+    });
+    // Clica no fundo para fechar também (opcional)
+    document.getElementById('modal-bg-wavemaker').onclick = closeWavemakerModal;
+    function selectWavemakerOption(idx, mode) {
+      fetch(`/setwavemakermode?rele=${idx}&mode=${mode}`)
+        .then(() => {
+          closeWavemakerModal();
+          fetchRelays(); // Atualiza a tela depois!
+        });
+    }
+
+
+
+    fetchRelays();
+  </script>
+</body>
+</html>
   )rawliteral";
   return page;
 }

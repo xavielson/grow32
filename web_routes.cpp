@@ -10,23 +10,57 @@
 WebServer server(80);
 
 // ---- Handlers ----
-void handleRoot()           { server.send(200, "text/html; charset=utf-8", getPage()); }
-void handleRelayData()      {
+void handleRoot()           { server.send(200, "text/html; charset=utf-8", getPage(DEBUG_MODE)); }
+
+const char* diasSemana[8] = { "Todos", "Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab" };
+
+void handleRelayData() {
   String js = "[";
-  for (int i=0; i<NUM_RELAYS; i++) {
-    if (i>0) js += ",";
+  for (int i = 0; i < NUM_RELAYS; i++) {
+    if (i > 0) js += ",";
+
     js += "{";
     js += "\"name\":\"" + htmlEscape(relays[i].name) + "\",";
     js += "\"type\":\"" + relays[i].type + "\",";
-    js += "\"state\":" + String(relayStates[i] ? "true":"false") + ",";
+    js += "\"state\":" + String(relayStates[i] ? "true" : "false") + ",";
     js += "\"num_sched\":" + String(scheduleCounts[i]) + ",";
     bool isManual = relayManual[i] || (scheduleCounts[i] == 0);
-    js += "\"manual\":" + String(isManual ? "true":"false");
+    js += "\"manual\":" + String(isManual ? "true" : "false");
+
+    // ---- AGENDAMENTOS ----
+    js += ",\"horarios\":[";
+    for (int j = 0; j < scheduleCounts[i]; j++) {
+      if (j > 0) js += ",";
+      ScheduleEvent& ev = schedules[i][j];
+      int d = ev.dayOfWeek; // 0=Todos, 1=Dom, etc
+      String dia = diasSemana[d >= 0 && d <= 7 ? d : 0];
+
+      char bufOn[9], bufOff[9];
+      sprintf(bufOn, "%02d:%02d:%02d", ev.h_on, ev.m_on, ev.s_on);
+      sprintf(bufOff, "%02d:%02d:%02d", ev.h_off, ev.m_off, ev.s_off);
+
+      // Liga
+      js += "{";
+      js += "\"acao\":\"liga\",";
+      js += "\"dia\":\"" + dia + "\",";
+      js += "\"hora\":\"" + String(bufOn) + "\"";
+      js += "},";
+
+      // Desliga
+      js += "{";
+      js += "\"acao\":\"desliga\",";
+      js += "\"dia\":\"" + dia + "\",";
+      js += "\"hora\":\"" + String(bufOff) + "\"";
+      js += "}";
+    }
+    js += "]";
+    // ----------------------
     js += "}";
   }
   js += "]";
   server.send(200, "application/json", js);
 }
+
 void handleToggleRelay()    {
   if (server.hasArg("rele")) {
     int idx = server.arg("rele").toInt();
@@ -274,12 +308,21 @@ void handleSetWavemakerSched() {
     }
     server.send(200, "text/plain", "OK");
 }
-
-
-
-
-
-
+void handleSetWavemakerMode() {
+    if (!server.hasArg("rele") || !server.hasArg("mode")) {
+        server.send(400, "text/plain", "Parâmetros ausentes");
+        return;
+    }
+    int idx = server.arg("rele").toInt();
+    int modo = server.arg("mode").toInt();
+    if (idx < 0 || idx >= NUM_RELAYS) {
+        server.send(400, "text/plain", "IDX inválido");
+        return;
+    }
+    relays[idx].wavemaker_mode = modo;
+    scheduleCounts[idx] = 0; // Limpa todos os eventos para este relay!
+    server.send(200, "text/plain", "OK");
+}
 
 
 // -- Setup rotas --
@@ -292,6 +335,7 @@ void setupWebRoutes() {
   server.on("/getsched", handleGetSched);
   server.on("/addsched", handleAddSched);
   server.on("/setwavemakersched", handleSetWavemakerSched);
+  server.on("/setwavemakermode", handleSetWavemakerMode);
   server.on("/delsched", handleDelSched);
   
 
