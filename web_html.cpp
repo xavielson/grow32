@@ -678,13 +678,76 @@ page += R"rawliteral(;
     }
 
     function getStatusLinha(device) {
-      if (!device.horarios || device.horarios.length === 0) {
-        return "Sem agendamentos";
+      console.log("Dispositivo:", device.name, JSON.stringify(device.horarios));
+      // 1. Se for wavemaker, retorna o modo apropriado imediatamente
+      if (device.type === "Wavemaker") {
+        const modos = [
+          "Sempre ligado",
+          "15min Ligado/15min Desligado",
+          "30min Ligado/30min Desligado",
+          "1h Ligado/1h Desligado",
+          "6h Ligado/6h Desligado",
+          "12h Ligado/12h Desligado",
+          "10s Ligado/10s Desligado"
+        ];
+        let idx = typeof device.wavemaker_mode === "number" ? device.wavemaker_mode : parseInt(device.wavemaker_mode);
+        return modos[idx] || "Modo indefinido";
       }
-      let next = device.horarios[0];
-      let acao = next.acao === "liga" ? "Liga" : "Desliga";
-      let dia  = next.dia === "hoje" ? "hoje" : next.dia;
-      return `${acao} ${dia} ${next.hora}`;
+
+      // 2. Sem agendamento? Retorna mensagem padrão
+      if (!device.has_schedule || !device.horarios || device.horarios.length === 0)
+        return "Sem agendamentos";
+
+      // ... restante do código para demais tipos ...
+      const agora = new Date();
+      const diaAtual = agora.getDay(); // 0=Dom, 1=Seg...
+      const segundosAtuais = agora.getHours() * 3600 + agora.getMinutes() * 60 + agora.getSeconds();
+      const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+      let proximoEvento = null;
+      let menorDiferenca = 8 * 24 * 3600; // mais que uma semana
+
+      device.horarios.forEach(ev => {
+        let diasParaTestar = [];
+        if (ev.dia === "Todos" || ev.dia === 0 || ev.dia === "0") {
+          diasParaTestar = [0,1,2,3,4,5,6];
+        } else if (typeof ev.dia === "number") {
+          diasParaTestar = [ev.dia];
+        } else {
+          let idx = diasSemana.indexOf(ev.dia);
+          if (idx >= 0) diasParaTestar = [idx];
+        }
+
+        let evHora = (ev.hora || ev.h_on || "00:00:00").split(':').map(Number);
+        let evSegundos = evHora[0]*3600 + evHora[1]*60 + evHora[2];
+
+        diasParaTestar.forEach(idxDiaEv => {
+          let diasAteEvento = idxDiaEv - diaAtual;
+          if (diasAteEvento < 0) diasAteEvento += 7;
+
+          let difSeg = diasAteEvento * 86400 + (evSegundos - segundosAtuais);
+          if (difSeg < 0) difSeg += 7 * 86400; // Garante só futuro
+
+          if (difSeg < menorDiferenca) {
+            menorDiferenca = difSeg;
+            proximoEvento = {
+              acao: ev.acao || "liga",
+              hora: (ev.hora || ev.h_on || "00:00:00"),
+              dia: idxDiaEv
+            };
+          }
+        });
+      });
+
+      if (!proximoEvento) return "Sem agendamentos";
+
+      let mostrarDia = "hoje";
+      if (proximoEvento.dia !== diaAtual) {
+        mostrarDia = diasSemana[proximoEvento.dia];
+      }
+
+      let acao = proximoEvento.acao === "liga" ? "Liga" : "Desliga";
+      return `${acao} ${mostrarDia} ${proximoEvento.hora}`;
     }
 
     function getIcon(type) {
@@ -765,6 +828,23 @@ page += R"rawliteral(;
         };
       });
     }
+    function updateStatusLinhas() {
+      const cardDivs = document.querySelectorAll('.card:not(.empty)');
+      cardDivs.forEach((card, i) => {
+        const idx = parseInt(card.getAttribute('data-idx'));
+        const device = relayData[idx];
+        if (!device) return;
+        const statusDiv = card.querySelector('.status-linha');
+        if (statusDiv) {
+          // Adicione este log:
+          console.log("Recalculando status", device.name, getStatusLinha(device));
+          statusDiv.textContent = getStatusLinha(device);
+        }
+        // Atualiza botão on/off
+        const checkbox = card.querySelector('input[type="checkbox"]');
+        if (checkbox) checkbox.checked = !!device.state;
+      });
+    }
 
     // ---- Modal moderno ----
     let selectedType = null;
@@ -832,9 +912,25 @@ page += R"rawliteral(;
         document.getElementById("clock").textContent = t;
       });
     }
+    
+    // Inicializa cards na tela
+    fetch("/relaydata").then(r=>r.json()).then(js=>{
+      relayData = js;
+      renderCards(relayData);
+    });
+
     setInterval(fetchClock, 1000);
     fetchClock();
-    setInterval(fetchRelays, 1000);
+
+    // Atualiza status-linha e botão on/off a cada segundo COM os dados mais recentes
+    setInterval(() => {
+      fetch("/relaydata")
+        .then(r => r.json())
+        .then(js => {
+          relayData = js;
+          updateStatusLinhas();
+        });
+    }, 1000);
 
     // ---- Modal Agendamento NOVO ----
     let agendamentoIdx = null;
@@ -945,9 +1041,6 @@ page += R"rawliteral(;
           fetchRelays(); // Atualiza a tela depois!
         });
     }
-
-
-
     fetchRelays();
   </script>
 </body>

@@ -6,9 +6,10 @@
 #define NUM_RELAYS 8
 #define NUM_PHYSICAL 8
 
+
 extern const int relayPins[NUM_PHYSICAL];
 extern bool relayStates[NUM_RELAYS];
-
+extern bool relayHasSchedule[NUM_RELAYS];
 // === ADIÇÃO: flag de modo manual para cada relé ===
 extern bool relayManual[NUM_RELAYS];
 

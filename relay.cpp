@@ -4,6 +4,8 @@
 const int relayPins[NUM_PHYSICAL] = {16, 17, 18, 19, 21, 22, 23, 25};
 bool relayStates[NUM_RELAYS] = {0,0,0,0,0,0,0,0};
 bool relayManual[NUM_RELAYS] = {0,0,0,0,0,0,0,0}; // Adicionado: modo manual para cada relé
+bool relayHasSchedule[NUM_RELAYS] = {false, false, false, false, false, false, false, false};
+
 
 RelayConfig relays[NUM_RELAYS] = {
   {"", ""},

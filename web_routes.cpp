@@ -24,6 +24,8 @@ void handleRelayData() {
     js += "\"type\":\"" + relays[i].type + "\",";
     js += "\"state\":" + String(relayStates[i] ? "true" : "false") + ",";
     js += "\"num_sched\":" + String(scheduleCounts[i]) + ",";
+    js += "\"has_schedule\":" + String(relayHasSchedule[i] ? "true" : "false") + ",";
+    js += "\"wavemaker_mode\":" + String(relays[i].wavemaker_mode) + ",";
     bool isManual = relayManual[i] || (scheduleCounts[i] == 0);
     js += "\"manual\":" + String(isManual ? "true" : "false");
 
@@ -142,6 +144,9 @@ void handleAddSched() {
   ev.m_off = server.arg("m_off").toInt();
   ev.s_off = server.arg("s_off").toInt();
   schedules[idx][scheduleCounts[idx]++] = ev;
+
+  relayHasSchedule[idx] = true;
+
   server.send(200,"text/plain","OK");
 }
 
@@ -155,6 +160,9 @@ void handleDelSched()       {
     schedules[idx][i] = schedules[idx][i+1];
   }
   scheduleCounts[idx]--;
+  if (scheduleCounts[idx] == 0 && relays[idx].type != "Wavemaker") {
+      relayHasSchedule[idx] = false;
+  }
   server.send(200,"text/plain","OK");
 }
 
@@ -172,16 +180,17 @@ void handleSetAuto() {
 // DEBUG: cria agendamentos de 1 segundo para debug manual (só no modo debug)
 void handleDebugSched() {
 
-    const char* nomes[] = {"Luz Teste", "Bomba Teste", "Wavemaker Teste", "Runoff Teste", 
-                          "Saída 5 Teste", "Saída 6 Teste", "Saída 7 Teste", "Saída 8 Teste"};
+    const char* nomes[] = {"Led Teste", "Bomba Teste", "Runoff Teste", "Led 2 Teste", 
+                          "Saída 5 Teste", "Saída 6 Teste", "Wavemaker 1 Teste", "Wavemaker 2 Teste"};
     const char* tipos[] = {"Led", "Rega", "Runoff", "Led", 
                           "Rega", "Runoff", "Wavemaker", "Wavemaker"};
 
     for (int i = 0; i < NUM_RELAYS; i++) {
         relays[i].name = nomes[i];
         relays[i].type = tipos[i];
+        relayHasSchedule[i] = true;
+        relays[i].wavemaker_mode = -1; // Zera por padrão
     }
-
 
     // Limpa agendamentos antigos de TODOS os relés
     for (int i = 0; i < NUM_RELAYS; i++) {
@@ -198,7 +207,7 @@ void handleDebugSched() {
     // ==== Fase 1: alternando um relé por vez (3 ciclos) ====
     int ciclos = 3;
     int k = 0;
-    for (; k < NUM_RELAYS * ciclos; k++) {
+    for (; k < (NUM_RELAYS-2) * ciclos; k++) { // Atenção: -2 para não criar eventos para os wavemakers
         int h = base_h, m = base_m, s_on = base_s + k;
 
         // Rollover dos segundos/minutos/horas
@@ -212,7 +221,7 @@ void handleDebugSched() {
         if (m_off >= 60) { m_off = 0; h_off += 1; }
         if (h_off >= 24) h_off = 0;
 
-        int rele = k % NUM_RELAYS;
+        int rele = k % (NUM_RELAYS-2); // Só para os que não são wavemaker
         ScheduleEvent ev;
         ev.dayOfWeek = 0;
         ev.h_on = h;
@@ -228,7 +237,7 @@ void handleDebugSched() {
 
     // ==== Fase 2: todos ligados 1s, todos desligados 1s, repete 5x ====
     for (int fase = 0; fase < 5; fase++) {
-        // Todos ligados por 1s
+        // Todos ligados por 1s (menos wavemakers)
         int h = base_h, m = base_m, s_on = base_s + k;
         if (s_on >= 60) { m += s_on / 60; s_on = s_on % 60; }
         if (m >= 60)    { h += m / 60;    m = m % 60; }
@@ -240,7 +249,7 @@ void handleDebugSched() {
         if (m_off >= 60) { m_off = 0; h_off += 1; }
         if (h_off >= 24) h_off = 0;
 
-        for (int rele = 0; rele < NUM_RELAYS; rele++) {
+        for (int rele = 0; rele < (NUM_RELAYS-2); rele++) { // Só os normais
             ScheduleEvent ev;
             ev.dayOfWeek = 0;
             ev.h_on = h;
@@ -259,55 +268,21 @@ void handleDebugSched() {
         if (s_on >= 60) { m += s_on / 60; s_on = s_on % 60; }
         if (m >= 60)    { h += m / 60;    m = m % 60; }
         if (h >= 24)    h = h % 24;
-
-        // Não cria agendamento para o segundo de "todos desligados"
         k++;
     }
 
-    server.send(200, "text/plain", "Debug concluído: fase alternada + todos ligados/desligados.");
+    // ==== Para os dois últimos relés, configura como Wavemaker em modo 10s/10s ====
+    for (int i = NUM_RELAYS-2; i < NUM_RELAYS; i++) {
+        relays[i].type = "Wavemaker";
+        relays[i].wavemaker_mode = 6; // 10s Ligado/10s Desligado
+        scheduleCounts[i] = 0;        // Não cria agendamentos
+        relayHasSchedule[i] = true;   // Tem "agendamento" (modo especial)
+    }
+
+    server.send(200, "text/plain", "Debug concluído: fase alternada + todos ligados/desligados + wavemaker.");
 }
-void handleSetWavemakerSched() {
-    if (!server.hasArg("rele") || !server.hasArg("on") || !server.hasArg("off")) {
-        server.send(400, "text/plain", "Parâmetros ausentes");
-        return;
-    }
-    int idx = server.arg("rele").toInt();
-    int on_seconds = server.arg("on").toInt();
-    int off_seconds = server.arg("off").toInt();
-    if (idx < 0 || idx >= NUM_RELAYS) {
-        server.send(400, "text/plain", "IDX inválido");
-        return;
-    }
-    scheduleCounts[idx] = 0;
-    if (on_seconds == 24*60*60 && off_seconds == 0) {
-        // Sempre ligado: cria UM evento 00:00:00 até 00:00:00 (interprete como 24h ligado)
-        ScheduleEvent ev;
-        ev.dayOfWeek = 0;
-        ev.h_on = 0; ev.m_on = 0; ev.s_on = 0;
-        ev.h_off = 0; ev.m_off = 0; ev.s_off = 0;
-        schedules[idx][scheduleCounts[idx]++] = ev;
-    } else {
-        int total = 24 * 60 * 60;
-        int t = 0;
-        while (t < total && scheduleCounts[idx] < MAX_EVENTS) {
-            ScheduleEvent evOn;
-            evOn.dayOfWeek = 0;
-            evOn.h_on = t / 3600;
-            evOn.m_on = (t % 3600) / 60;
-            evOn.s_on = t % 60;
-            t += on_seconds;
-            int h_off = t / 3600;
-            int m_off = (t % 3600) / 60;
-            int s_off = t % 60;
-            evOn.h_off = h_off;
-            evOn.m_off = m_off;
-            evOn.s_off = s_off;
-            schedules[idx][scheduleCounts[idx]++] = evOn;
-            t += off_seconds;
-        }
-    }
-    server.send(200, "text/plain", "OK");
-}
+
+
 void handleSetWavemakerMode() {
     if (!server.hasArg("rele") || !server.hasArg("mode")) {
         server.send(400, "text/plain", "Parâmetros ausentes");
@@ -321,6 +296,7 @@ void handleSetWavemakerMode() {
     }
     relays[idx].wavemaker_mode = modo;
     scheduleCounts[idx] = 0; // Limpa todos os eventos para este relay!
+    relayHasSchedule[idx] = true;  // <--- PASSO 4: marca que agora tem agendamento (modo ativo)
     server.send(200, "text/plain", "OK");
 }
 
@@ -333,8 +309,7 @@ void setupWebRoutes() {
   server.on("/setconfig", handleSetConfig);
   server.on("/clock", handleClock);
   server.on("/getsched", handleGetSched);
-  server.on("/addsched", handleAddSched);
-  server.on("/setwavemakersched", handleSetWavemakerSched);
+  server.on("/addsched", handleAddSched);  
   server.on("/setwavemakermode", handleSetWavemakerMode);
   server.on("/delsched", handleDelSched);
   
