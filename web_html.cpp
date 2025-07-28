@@ -267,14 +267,12 @@ String getPage(bool debug) {
       margin-bottom:14px;
       box-sizing: border-box;
     }
-    }
     #modal-agendamentos input[type="text"], #modal-agendamentos input[type="number"] {
       width:100%;
       padding:8px;
       font-size:17px;
       border:1px solid #c5cdd3;
       border-radius:8px;
-      //margin-bottom:14px;
       box-sizing: border-box;
     }
     .type-list {
@@ -576,6 +574,26 @@ String getPage(bool debug) {
       min-width:330px;
       max-width:98vw;
     }
+    .manual-label {
+      display: inline-block;
+      background: #ffe1e8;
+      color: #d31b42;
+      font-weight: 700;
+      font-size: 0.55em;         /* antes 0.78em */
+      border-radius: 4px;        /* antes 6px */
+      padding: 1px 7px 1px 7px;  /* antes 2px 10px 2px 10px */
+      cursor: pointer;
+      border: 0.8px solid #f6a3b2; /* antes 1.2px */
+      letter-spacing: 0.7px;     /* antes 1px */
+      margin-right: 2.5px;       /* antes 4px */
+      margin-left: 0;
+      transition: background 0.18s;
+      box-shadow: 0 0.4px 0.9px #f6a3b266; /* antes 0 0.5px 1.3px */
+    }
+    .manual-label:hover {
+      background: #ffd2dc;
+    }
+
 
   </style>
 </head>
@@ -677,9 +695,14 @@ page += R"rawliteral(;
       document.getElementById("debugBtn").style.display = "none";
     }
 
+    // Refatorado com compatibilidade total + NTP support
     function getStatusLinha(device) {
-      console.log("Dispositivo:", device.name, JSON.stringify(device.horarios));
-      // 1. Se for wavemaker, retorna o modo apropriado imediatamente
+      if (typeof ntpTime === "undefined" || !ntpTime) {
+        return "Sincronizando horário...";
+      }
+
+      
+
       if (device.type === "Wavemaker") {
         const modos = [
           "Sempre ligado",
@@ -690,66 +713,97 @@ page += R"rawliteral(;
           "12h Ligado/12h Desligado",
           "10s Ligado/10s Desligado"
         ];
-        let idx = typeof device.wavemaker_mode === "number" ? device.wavemaker_mode : parseInt(device.wavemaker_mode);
+        let idx = typeof device.wavemaker_mode === "number"
+          ? device.wavemaker_mode
+          : parseInt(device.wavemaker_mode);
         return modos[idx] || "Modo indefinido";
       }
 
-      // 2. Sem agendamento? Retorna mensagem padrão
-      if (!device.has_schedule || !device.horarios || device.horarios.length === 0)
+      if (!device.has_schedule || !device.horarios || device.horarios.length === 0) {
         return "Sem agendamentos";
+      }
 
-      // ... restante do código para demais tipos ...
-      const agora = new Date();
-      const diaAtual = agora.getDay(); // 0=Dom, 1=Seg...
-      const segundosAtuais = agora.getHours() * 3600 + agora.getMinutes() * 60 + agora.getSeconds();
       const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+      const diaAtual = ntpTime.weekday;
+      const segundosAtuais = ntpTime.hour * 3600 + ntpTime.minute * 60 + ntpTime.second;
 
       let proximoEvento = null;
-      let menorDiferenca = 8 * 24 * 3600; // mais que uma semana
+      let menorDiferenca = 8 * 86400;
+
+      function horaParaSegundos(horaStr) {
+        const partes = (horaStr || "00:00:00").split(":").map(Number);
+        return (partes[0] || 0) * 3600 + (partes[1] || 0) * 60 + (partes[2] || 0);
+      }
 
       device.horarios.forEach(ev => {
         let diasParaTestar = [];
-        if (ev.dia === "Todos" || ev.dia === 0 || ev.dia === "0") {
-          diasParaTestar = [0,1,2,3,4,5,6];
+        if (ev.dia === "Todos") {
+          diasParaTestar = [0, 1, 2, 3, 4, 5, 6];
         } else if (typeof ev.dia === "number") {
           diasParaTestar = [ev.dia];
+        } else if (!isNaN(Number(ev.dia))) {
+          diasParaTestar = [Number(ev.dia)];
         } else {
           let idx = diasSemana.indexOf(ev.dia);
           if (idx >= 0) diasParaTestar = [idx];
         }
 
-        let evHora = (ev.hora || ev.h_on || "00:00:00").split(':').map(Number);
-        let evSegundos = evHora[0]*3600 + evHora[1]*60 + evHora[2];
+        const temHOnHOff = ev.h_on && ev.h_off;
+        const hOnSeg = horaParaSegundos(ev.h_on);
+        const hOffSeg = horaParaSegundos(ev.h_off);
+        const unicaHora = horaParaSegundos(ev.hora);
 
         diasParaTestar.forEach(idxDiaEv => {
           let diasAteEvento = idxDiaEv - diaAtual;
           if (diasAteEvento < 0) diasAteEvento += 7;
 
-          let difSeg = diasAteEvento * 86400 + (evSegundos - segundosAtuais);
-          if (difSeg < 0) difSeg += 7 * 86400; // Garante só futuro
+          const baseSegundos = diasAteEvento * 86400;
 
-          if (difSeg < menorDiferenca) {
-            menorDiferenca = difSeg;
-            proximoEvento = {
-              acao: ev.acao || "liga",
-              hora: (ev.hora || ev.h_on || "00:00:00"),
-              dia: idxDiaEv
-            };
+          if (temHOnHOff) {
+            if (diasAteEvento === 0 && segundosAtuais < hOnSeg) {
+              const dif = baseSegundos + (hOnSeg - segundosAtuais);
+              if (dif < menorDiferenca) {
+                menorDiferenca = dif;
+                proximoEvento = { acao: "liga", hora: ev.h_on, dia: idxDiaEv };
+              }
+            } else if (diasAteEvento === 0 && segundosAtuais >= hOnSeg && segundosAtuais < hOffSeg) {
+              const dif = baseSegundos + (hOffSeg - segundosAtuais);
+              if (dif < menorDiferenca) {
+                menorDiferenca = dif;
+                proximoEvento = { acao: "desliga", hora: ev.h_off, dia: idxDiaEv };
+              }
+            } else if (diasAteEvento !== 0) {
+              const dif = baseSegundos + (hOnSeg - segundosAtuais);
+              if (dif < menorDiferenca) {
+                menorDiferenca = dif;
+                proximoEvento = { acao: "liga", hora: ev.h_on, dia: idxDiaEv };
+              }
+            }
+          } else {
+            const evSeg = unicaHora;
+            let eventoNoPassado = diasAteEvento === 0 && evSeg <= segundosAtuais;
+            let ajuste = eventoNoPassado ? 7 * 86400 : 0;
+            const difSeg = baseSegundos + (evSeg - segundosAtuais) + ajuste;
+
+            if (difSeg < menorDiferenca) {
+              menorDiferenca = difSeg;
+              proximoEvento = {
+                acao: ev.acao || "liga",
+                hora: ev.hora || "00:00:00",
+                dia: idxDiaEv
+              };
+            }
           }
         });
       });
 
-      if (!proximoEvento) return "Sem agendamentos";
-
-      let mostrarDia = "hoje";
-      if (proximoEvento.dia !== diaAtual) {
-        mostrarDia = diasSemana[proximoEvento.dia];
+      if (proximoEvento) {
+        let mostrarDia = diasSemana[proximoEvento.dia];
+        let acao = proximoEvento.acao === "liga" ? "Liga" : "Desliga";
+        return `${acao} ${mostrarDia} ${proximoEvento.hora}`;
       }
-
-      let acao = proximoEvento.acao === "liga" ? "Liga" : "Desliga";
-      return `${acao} ${mostrarDia} ${proximoEvento.hora}`;
+      return "Nenhum evento futuro encontrado.";
     }
-
     function getIcon(type) {
       if (type === "LED" || type === "Led") return "💡";
       if (type === "Rega") return "💧";
@@ -770,11 +824,12 @@ page += R"rawliteral(;
               <div class="labels">
                 <div>
                   <span class="label-nome">${d.name}</span>
-                  <span class="label-tipo">${d.type}</span>
                 </div>
+                <span class="label-tipo">${d.type}</span>
                 <div class="status-linha">${getStatusLinha(d)}</div>
               </div>
               <div class="switch-num-wrap">
+                ${d.manual ? `<span class="manual-label" onclick="desativarManual(${i}, event)">MANUAL</span>` : ""}
                 <label class="toggle-switch" onclick="event.stopPropagation()">
                   <input type="checkbox" data-idx="${i}" ${d.state ? "checked" : ""}>
                   <span class="slider"></span>
@@ -835,9 +890,7 @@ page += R"rawliteral(;
         const device = relayData[idx];
         if (!device) return;
         const statusDiv = card.querySelector('.status-linha');
-        if (statusDiv) {
-          // Adicione este log:
-          console.log("Recalculando status", device.name, getStatusLinha(device));
+        if (statusDiv) {          
           statusDiv.textContent = getStatusLinha(device);
         }
         // Atualiza botão on/off
@@ -900,15 +953,34 @@ page += R"rawliteral(;
         .then(() => { setTimeout(fetchRelays, 200); });
     }
 
+    let ntpTime = null;
+
     function fetchClock() {
       fetch("/clock").then(r => r.text()).then(txt => {
         let t = txt.replace(/^Hora atual:\s*/, '');
-        if (/^\d\d:\d\d:\d\d$/.test(t)) {
+
+        // Suporte tanto para "SEG 13:51:20" quanto "13:51:20"
+        let dia, hora;
+        if (/^[A-Z]{3} \d\d:\d\d:\d\d$/.test(t)) {
+          [dia, hora] = t.split(" ");
+        } else if (/^\d\d:\d\d:\d\d$/.test(t)) {
+          // Se veio só hora, puxa dia local (menos preciso, mas previne crash)
+          hora = t;
           const dias = ["DOM","SEG","TER","QUA","QUI","SEX","SAB"];
-          const now = new Date();
-          const dia = dias[now.getDay()];
-          t = dia + " " + t;
+          dia = dias[(new Date()).getDay()];
+        } else {
+          // Formato inesperado
+          document.getElementById("clock").textContent = t;
+          ntpTime = null;
+          return;
         }
+
+        // Guarda NTP time para uso global
+        const diasIdx = { "DOM":0, "SEG":1, "TER":2, "QUA":3, "QUI":4, "SEX":5, "SAB":6 };
+        let weekday = diasIdx[dia.toUpperCase()] ?? 0;
+        let [h, m, s] = hora.split(":").map(Number);
+        ntpTime = { weekday, hour: h, minute: m, second: s };
+
         document.getElementById("clock").textContent = t;
       });
     }
@@ -982,6 +1054,12 @@ page += R"rawliteral(;
       fetch(`/delsched?rele=${idx}&idx=${evIdx}`, {method:"POST"})
         .then(()=>{ fetchAgendamentos(idx); });
     }
+    function desativarManual(idx, ev) {
+      ev.stopPropagation();
+      fetch(`/setauto?rele=${idx}`)
+        .then(() => setTimeout(fetchRelays, 200));
+    }
+
     document.getElementById('addSchedForm').onsubmit = function(ev) {
       ev.preventDefault();
       const idx = agendamentoIdx;
@@ -1041,6 +1119,7 @@ page += R"rawliteral(;
           fetchRelays(); // Atualiza a tela depois!
         });
     }
+
     fetchRelays();
   </script>
 </body>

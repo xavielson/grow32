@@ -26,7 +26,8 @@ void handleRelayData() {
     js += "\"num_sched\":" + String(scheduleCounts[i]) + ",";
     js += "\"has_schedule\":" + String(relayHasSchedule[i] ? "true" : "false") + ",";
     js += "\"wavemaker_mode\":" + String(relays[i].wavemaker_mode) + ",";
-    bool isManual = relayManual[i] || (scheduleCounts[i] == 0);
+    bool isWavemaker = relays[i].type == "Wavemaker";
+    bool isManual = relayManual[i] || (!isWavemaker && scheduleCounts[i] == 0);
     js += "\"manual\":" + String(isManual ? "true" : "false");
 
     // ---- AGENDAMENTOS ----
@@ -223,7 +224,11 @@ void handleDebugSched() {
 
         int rele = k % (NUM_RELAYS-2); // Só para os que não são wavemaker
         ScheduleEvent ev;
-        ev.dayOfWeek = 0;
+        if (relays[rele].type == "Rega") {
+            ev.dayOfWeek = timeinfo.tm_wday + 1;
+        } else {
+            ev.dayOfWeek = 0;
+        }
         ev.h_on = h;
         ev.m_on = m;
         ev.s_on = s_on;
@@ -251,7 +256,11 @@ void handleDebugSched() {
 
         for (int rele = 0; rele < (NUM_RELAYS-2); rele++) { // Só os normais
             ScheduleEvent ev;
-            ev.dayOfWeek = 0;
+            if (relays[rele].type == "Rega") {
+                ev.dayOfWeek = timeinfo.tm_wday + 1;
+            } else {
+                ev.dayOfWeek = 0;
+            }
             ev.h_on = h;
             ev.m_on = m;
             ev.s_on = s_on;
