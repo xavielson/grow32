@@ -107,6 +107,7 @@ void handleSetConfig() {
                 relays[idx].type = type;
         }
     }
+    storage_save_all(relays, NUM_RELAYS);
     server.send(200, "text/plain", "OK");
 }
 
@@ -192,7 +193,7 @@ void handleAddSched() {
 
     relayHasSchedule[idx] = true;
 
-    storage_save_schedules();
+    storage_save_all(relays, NUM_RELAYS);
     server.send(200, "text/plain", "OK");
 }
 
@@ -214,7 +215,7 @@ void handleDelSched() {
     if (scheduleCounts[idx] == 0 && relays[idx].type != "Wavemaker") {
         relayHasSchedule[idx] = false;
     }
-    storage_save_schedules();
+    storage_save_all(relays, NUM_RELAYS);
     server.send(200, "text/plain", "OK");
 }
 
@@ -342,8 +343,7 @@ void handleDebugSched() {
         scheduleCounts[i] = 0;
         relayHasSchedule[i] = true;
     }
-    storage_save_relays(relays, NUM_RELAYS);
-    storage_save_schedules();
+    storage_save_all(relays, NUM_RELAYS);
 
     server.send(200, "text/plain", "Debug concluído: fase alternada + todos ligados/desligados + wavemaker.");
 }
@@ -367,54 +367,126 @@ void handleSetWavemakerMode() {
     relays[idx].wavemaker_mode = modo;
     scheduleCounts[idx] = 0; // Limpa eventos
     relayHasSchedule[idx] = true;
-    storage_save_relays(relays, NUM_RELAYS);
+    storage_save_all(relays, NUM_RELAYS);
     server.send(200, "text/plain", "OK");
 }
 
-/**
- * Handler: exporta relay.json schedules.json em um arquivo
- * Endpoint: "/export_all"
- * Método: GET
- */
+// /**
+//  * Handler: exporta relay.json schedules.json em um arquivo
+//  * Endpoint: "/export_all"
+//  * Método: GET
+//  */
+// void handleExportAll() {
+//     StaticJsonDocument<32768> doc; // Ajuste o tamanho conforme necessário
+
+//     // Lê relays.json
+//     File fRelays = SPIFFS.open("/relays.json", "r");
+//     if (fRelays) {
+//         DeserializationError err = deserializeJson(doc["relays"], fRelays);
+//         fRelays.close();
+//         if (err) {
+//             server.send(500, "text/plain", "Erro ao ler relays.json");
+//             return;
+//         }
+//     } else {
+//         server.send(500, "text/plain", "relays.json não encontrado");
+//         return;
+//     }
+
+//     // Lê schedules.json
+//     File fSchedules = SPIFFS.open("/schedules.json", "r");
+//     if (fSchedules) {
+//         DeserializationError err = deserializeJson(doc["schedules"], fSchedules);
+//         fSchedules.close();
+//         if (err) {
+//             server.send(500, "text/plain", "Erro ao ler schedules.json");
+//             return;
+//         }
+//     } else {
+//         server.send(500, "text/plain", "schedules.json não encontrado");
+//         return;
+//     }
+
+//     String response;
+//     serializeJson(doc, response);
+//     server.sendHeader("Content-Disposition", "attachment; filename=\"backup_grow32.json\"");
+//     server.send(200, "application/json", response);
+
+// }
+
+
+
+// void handleImportAll() {
+//     if (!server.hasArg("plain")) {
+//         server.send(400, "text/plain", "Dados JSON ausentes");
+//         return;
+//     }
+//     String data = server.arg("plain");
+//     if (data.length() < 10) {
+//         server.send(400, "text/plain", "JSON muito curto");
+//         return;
+//     }
+//     // Parse o JSON recebido
+//     StaticJsonDocument<32768> doc; // ajuste se necessário!
+//     DeserializationError err = deserializeJson(doc, data);
+//     if (err) {
+//         server.send(400, "text/plain", "JSON malformado");
+//         return;
+//     }
+//     // Pega cada parte
+//     if (!doc.containsKey("relays") || !doc.containsKey("schedules")) {
+//         server.send(400, "text/plain", "Faltam campos 'relays' ou 'schedules'");
+//         return;
+//     }
+
+//     // Salva relays
+//     {
+//         File f = SPIFFS.open("/relays.json", "w");
+//         if (!f) {
+//             server.send(500, "text/plain", "Erro ao abrir relays.json para escrita");
+//             return;
+//         }
+//         StaticJsonDocument<32768> relayDoc;
+//         relayDoc["relays"] = doc["relays"];
+//         serializeJson(relayDoc, f);
+//         f.close();
+//     }
+//     // Salva schedules
+//     {
+//         File f = SPIFFS.open("/schedules.json", "w");
+//         if (!f) {
+//             server.send(500, "text/plain", "Erro ao abrir schedules.json para escrita");
+//             return;
+//         }
+//         StaticJsonDocument<32768> schedDoc;
+//         schedDoc["schedules"] = doc["schedules"];
+//         serializeJson(schedDoc, f);
+//         f.close();
+//     }
+
+//     // Carrega para RAM
+//     bool okRelays = storage_load_relays(relays, NUM_RELAYS);
+//     bool okSchedules = storage_load_schedules();
+
+//     if (!okRelays || !okSchedules) {
+//         server.send(500, "text/plain", "Importou arquivos, mas erro ao carregar na RAM");
+//         return;
+//     }
+
+//     updateRelayHasSchedule();
+//     server.send(200, "text/plain", "Importação de relés e agendamentos concluída!");
+// }
+
 void handleExportAll() {
-    StaticJsonDocument<32768> doc; // Ajuste o tamanho conforme necessário
-
-    // Lê relays.json
-    File fRelays = SPIFFS.open("/relays.json", "r");
-    if (fRelays) {
-        DeserializationError err = deserializeJson(doc["relays"], fRelays);
-        fRelays.close();
-        if (err) {
-            server.send(500, "text/plain", "Erro ao ler relays.json");
-            return;
-        }
-    } else {
-        server.send(500, "text/plain", "relays.json não encontrado");
+    File f = SPIFFS.open("/grow32.json", "r");
+    if (!f) {
+        server.send(500, "text/plain", "Erro ao abrir backup.");
         return;
     }
-
-    // Lê schedules.json
-    File fSchedules = SPIFFS.open("/schedules.json", "r");
-    if (fSchedules) {
-        DeserializationError err = deserializeJson(doc["schedules"], fSchedules);
-        fSchedules.close();
-        if (err) {
-            server.send(500, "text/plain", "Erro ao ler schedules.json");
-            return;
-        }
-    } else {
-        server.send(500, "text/plain", "schedules.json não encontrado");
-        return;
-    }
-
-    String response;
-    serializeJson(doc, response);
-    server.sendHeader("Content-Disposition", "attachment; filename=\"backup_grow32.json\"");
-    server.send(200, "application/json", response);
-
+    server.sendHeader("Content-Disposition", "attachment; filename=backup_grow32.json");
+    server.streamFile(f, "application/json");
+    f.close();
 }
-
-
 
 void handleImportAll() {
     if (!server.hasArg("plain")) {
@@ -426,58 +498,22 @@ void handleImportAll() {
         server.send(400, "text/plain", "JSON muito curto");
         return;
     }
-    // Parse o JSON recebido
-    StaticJsonDocument<32768> doc; // ajuste se necessário!
-    DeserializationError err = deserializeJson(doc, data);
-    if (err) {
-        server.send(400, "text/plain", "JSON malformado");
+
+    // (Opcional: validar JSON antes de salvar)
+    File f = SPIFFS.open("/grow32.json", "w");
+    if (!f) {
+        server.send(500, "text/plain", "Erro ao salvar backup.");
         return;
     }
-    // Pega cada parte
-    if (!doc.containsKey("relays") || !doc.containsKey("schedules")) {
-        server.send(400, "text/plain", "Faltam campos 'relays' ou 'schedules'");
-        return;
-    }
+    f.print(data);
+    f.close();
 
-    // Salva relays
-    {
-        File f = SPIFFS.open("/relays.json", "w");
-        if (!f) {
-            server.send(500, "text/plain", "Erro ao abrir relays.json para escrita");
-            return;
-        }
-        StaticJsonDocument<32768> relayDoc;
-        relayDoc["relays"] = doc["relays"];
-        serializeJson(relayDoc, f);
-        f.close();
-    }
-    // Salva schedules
-    {
-        File f = SPIFFS.open("/schedules.json", "w");
-        if (!f) {
-            server.send(500, "text/plain", "Erro ao abrir schedules.json para escrita");
-            return;
-        }
-        StaticJsonDocument<32768> schedDoc;
-        schedDoc["schedules"] = doc["schedules"];
-        serializeJson(schedDoc, f);
-        f.close();
-    }
-
-    // Carrega para RAM
-    bool okRelays = storage_load_relays(relays, NUM_RELAYS);
-    bool okSchedules = storage_load_schedules();
-
-    if (!okRelays || !okSchedules) {
-        server.send(500, "text/plain", "Importou arquivos, mas erro ao carregar na RAM");
-        return;
-    }
+    // Carrega imediatamente na RAM:
+    storage_load_all(relays, NUM_RELAYS);
 
     updateRelayHasSchedule();
-    server.send(200, "text/plain", "Importação de relés e agendamentos concluída!");
+    server.send(200, "text/plain", "Backup restaurado com sucesso!");
 }
-
-
 
 /**
  * Função de setup das rotas HTTP.
@@ -492,7 +528,7 @@ void setupWebRoutes() {
     server.on("/addsched", handleAddSched);
     server.on("/setwavemakermode", handleSetWavemakerMode);
     server.on("/export_all", HTTP_GET, handleExportAll);
-    server.on("/import_all", HTTP_POST, handleImportAll);
+    server.on("/import_all", HTTP_POST, handleImportAll); 
     server.on("/delsched", handleDelSched);
 
     // Rota de debug (1/0) — sempre registrada
