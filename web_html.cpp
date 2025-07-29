@@ -1,5 +1,9 @@
 #include "web_html.h"
 
+/**
+ * Função utilitária para escapar caracteres perigosos do HTML.
+ * Previne injeção ou quebras no template.
+ */
 String htmlEscape(const String& str) {
   String out = "";
   for (size_t i = 0; i < str.length(); i++) {
@@ -14,6 +18,12 @@ String htmlEscape(const String& str) {
   return out;
 }
 
+
+/**
+ * Retorna o HTML principal da interface web.
+ * Inclui todo CSS, modais, frontend JS, etc.
+ * O parâmetro debug ativa elementos extras para depuração.
+ */
 String getPage(bool debug) {
   
   String page = R"rawliteral(
@@ -529,6 +539,33 @@ String getPage(bool debug) {
       height: 40px; /* Ajuste se necessário, para acomodar o botão */
     }
 
+    .main-buttons {
+      display: flex;
+      justify-content: center; /* centraliza os botões horizontalmente */
+      align-items: center;
+      gap: 10px;
+      margin: 30px 0 12px 0;  /* espaçamento acima e abaixo, ajuste como quiser */
+      position: static; /* ou simplesmente remova position, top, right, transform */
+    }
+
+    .mainBtn {
+      padding: 7px 22px;
+      background: #445;
+      color: #eee;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 1px 3px #0002;
+      cursor: pointer;
+      transition: background .14s;
+      display: inline-block;   /* <-- troque de 'none' para 'inline-block' */
+    }
+    .mainBtn:hover {
+      background: #9ca3ad;
+      color: #fff;
+    }
+
     #clock {
       text-align: center;
       font-size: 1.23em;
@@ -539,28 +576,7 @@ String getPage(bool debug) {
       line-height: 40px; /* Igual à altura da .clock-bar, para centralizar verticalmente */
     }
 
-    #debugBtn {
-      position: absolute;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      margin-left: 0;
-      padding: 3px 12px;
-      background: #445;
-      color: #eee;
-      border: none;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      box-shadow: 0 1px 3px #0002;
-      cursor: pointer;
-      transition: background .14s;
-      display: none;
-    }
-    #debugBtn:hover {
-      background: #9ca3ad;
-      color: #eee;
-    }
+
     #modal-wavemaker {
       position:fixed;
       left:50%;
@@ -600,9 +616,13 @@ String getPage(bool debug) {
 <body>
   <div class="clock-bar">
     <div id="clock"></div>
-    <button id="debugBtn" style="display:none;">Debug</button>
   </div>
   <div class="cards" id="cards"></div>
+  <div class="main-buttons">
+  <button id="debugBtn" class="mainBtn" style="display:none;">Debug</button>
+  <input type="file" id="importFile" accept=".json,application/json" style="display:none;">
+  <button id="importBtn" class="mainBtn">Restaurar Backup</button>
+  </div>
   <div id="modal-bg"></div>
   <div id="modal-config">
     <form id="configForm" autocomplete="off">
@@ -855,6 +875,8 @@ page += R"rawliteral(;
       setupListeners();
     }
 
+
+
     function setupListeners() {
       const cardsDiv = document.getElementById("cards");
       cardsDiv.onclick = function(event) {
@@ -1059,6 +1081,32 @@ page += R"rawliteral(;
       fetch(`/setauto?rele=${idx}`)
         .then(() => setTimeout(fetchRelays, 200));
     }
+
+    document.getElementById('importBtn').onclick = function() {
+      document.getElementById('importFile').click();
+    };
+    document.getElementById('importFile').onchange = function(evt) {
+      const file = evt.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        fetch('/import_all', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: e.target.result
+        })
+        .then(r => r.text())
+        .then(txt => {
+          alert(txt);
+          fetchRelays(); // Atualiza tela após importar!
+        })
+        .catch(err => {
+          alert("Erro ao importar backup: " + err);
+        });
+      };
+      reader.readAsText(file);
+    };
+
 
     document.getElementById('addSchedForm').onsubmit = function(ev) {
       ev.preventDefault();
