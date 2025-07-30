@@ -515,6 +515,31 @@ void handleImportAll() {
     server.send(200, "text/plain", "Backup restaurado com sucesso!");
 }
 
+void handleResetAll() {
+    // Zera agendamentos
+    for (int i = 0; i < NUM_RELAYS; i++) {
+        scheduleCounts[i] = 0;
+        relayStates[i] = false;
+        relayManual[i] = false;
+        relayHasSchedule[i] = false;
+        // Zera os próprios objetos ScheduleEvent (opcional, mas garante tudo limpo)
+        for (int j = 0; j < MAX_EVENTS; j++) {
+            schedules[i][j] = {0};
+        }
+    }
+    // Zera relays se quiser (nome/tipo também):
+    for (int i = 0; i < NUM_RELAYS; i++) {
+        relays[i].name = "";
+        relays[i].type = "";
+        relays[i].wavemaker_mode = -1;
+    }
+
+    // Salva zerado
+    storage_save_all(relays, NUM_RELAYS);
+
+    server.send(200, "text/plain", "Configurações e horários zerados!");
+}
+
 /**
  * Função de setup das rotas HTTP.
  */
@@ -529,6 +554,7 @@ void setupWebRoutes() {
     server.on("/setwavemakermode", handleSetWavemakerMode);
     server.on("/export_all", HTTP_GET, handleExportAll);
     server.on("/import_all", HTTP_POST, handleImportAll); 
+    server.on("/reset_all", HTTP_POST, handleResetAll);
     server.on("/delsched", handleDelSched);
 
     // Rota de debug (1/0) — sempre registrada
