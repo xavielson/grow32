@@ -43,9 +43,10 @@ extern bool relayManual[NUM_RELAYS];
 struct RelayConfig {
     String name;
     String type;
-    int wavemaker_mode = -1;
-    //ScheduleEvent schedules[MAX_SCHEDULES];
+    int wavemaker_mode;
     int schedule_count;
+    RelayConfig(const String& n="", const String& t="", int wm=-1, int sc=0)
+        : name(n), type(t), wavemaker_mode(wm), schedule_count(sc) {}
 };
 
 extern RelayConfig relays[NUM_RELAYS];

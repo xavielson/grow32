@@ -72,7 +72,7 @@ String getPage(bool debug) {
       font-size: 1.0em;
       border-radius: 7px;
       transition: background 0.15s, color 0.15s;
-      padding: 2px 6px 0 6px;
+      padding: 2px 16px 0 6px;
       height: 34px;
       display: flex;
       align-items: center;

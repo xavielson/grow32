@@ -153,12 +153,10 @@ void handleGetSched() {
         js += ",\"s_off\":" + String(schedules[idx][i].s_off);
         js += "}";
     }
-    js += "]";
-    Serial.printf("[GETSCHED] idx=%d, eventos=%d\n", idx, scheduleCounts[idx]);
-    if (scheduleCounts[idx] > 0) {
-        Serial.printf("[GETSCHED] Primeiro evento: %02d:%02d:%02d ~ %02d:%02d:%02d\n",
+    js += "]";    
+    if (scheduleCounts[idx] > 0) {        
             schedules[idx][0].h_on, schedules[idx][0].m_on, schedules[idx][0].s_on,
-            schedules[idx][0].h_off, schedules[idx][0].m_off, schedules[idx][0].s_off);
+            schedules[idx][0].h_off, schedules[idx][0].m_off, schedules[idx][0].s_off;
     }
     server.send(200, "application/json", js);
 }

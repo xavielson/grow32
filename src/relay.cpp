@@ -18,15 +18,15 @@ bool relayHasSchedule[NUM_RELAYS] = {false};
  * Configuração inicial dos relés.
  * Ajuste nome/tipo conforme necessidade.
  */
-extern RelayConfig relays[NUM_RELAYS] = {
-    {"", ""},
-    {"", ""},
-    {"", ""},
-    {"", ""},
-    {"", ""},
-    {"", ""},
-    {"", ""},
-    {"", ""}
+RelayConfig relays[NUM_RELAYS] = {
+    {"", "", -1, 0},
+    {"", "", -1, 0},
+    {"", "", -1, 0},
+    {"", "", -1, 0},
+    {"", "", -1, 0},
+    {"", "", -1, 0},
+    {"", "", -1, 0},
+    {"", "", -1, 0},
 };
 
 /**
