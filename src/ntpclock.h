@@ -2,6 +2,12 @@
 #define NTPCLOCK_H
 
 #include <time.h>
+#include <RTClib.h>
+
+
+extern RTC_DS3231 rtc;
+
+void ntp_or_rtc_setup();
 
 /**
  * Inicializa e sincroniza o relógio NTP (bloqueante até sincronizar).

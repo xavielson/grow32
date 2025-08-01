@@ -782,6 +782,10 @@ String getPage(bool debug) {
       <li data-opt="5"><span>12h ligado/12h desligado</span></li>
       <li data-opt="debug" style="display:none;"><span>10s ligado/10s desligado</span></li>
     </ul>
+    <div class="schedBtns" style="display:flex; gap:12px; margin-top:2px; padding-top:20px;">      
+      <button type="button" class="mainBtn" onclick="closeWavemakerModal()">Fechar</button>
+      <button type="button" class="mainBtn danger" onclick="apagarDispositivoWavemaker()" id="apagarBtn">Apagar</button>
+    </div>
   </div>
   <div id="modal-bg-wavemaker" style="display:none;position:fixed;left:0;top:0;width:100vw;height:100vh;background:#0009;z-index:10;"></div>
 
@@ -1136,13 +1140,15 @@ String getPage(bool debug) {
     function apagarAgendamentos() {
       if (typeof agendamentoIdx !== "number") return;
       fetch("/reset_schedules?rele=" + agendamentoIdx, {method:"POST"})
-        .then(()=>{ closeApagarModal(); closeAgendamentoModal(); fetchRelays(); });
+        .then(()=>{ closeApagarModal(); fetchAgendamentos(agendamentoIdx); fetchRelays(); });
     }
     function apagarDispositivo() {
       if (typeof agendamentoIdx !== "number") return;
       fetch("/reset_device?rele=" + agendamentoIdx, {method:"POST"})
         .then(()=>{ closeApagarModal(); closeAgendamentoModal(); fetchRelays(); });
     }
+
+
 
     // ================== MODAL WAVEMAKER ==================
     let wavemakerIdx = null;
@@ -1173,6 +1179,15 @@ String getPage(bool debug) {
         .then(() => {
           closeWavemakerModal();
           fetchRelays();
+        });
+    }
+
+    function apagarDispositivoWavemaker() {
+      if (typeof agendamentoIdx !== "number") return;
+      fetch("/reset_device?rele=" + agendamentoIdx, {method: "POST"})
+        .then(() => {
+          closeWavemakerModal(); // Fecha só o modal do wavemaker
+          fetchRelays();              // Atualiza a lista de dispositivos
         });
     }
 

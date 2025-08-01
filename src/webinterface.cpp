@@ -1,15 +1,14 @@
 #include "webinterface.h"
 #include <WiFi.h>
 #include "web_routes.h"
-#include "config.h" // Sugestão: mover SSID/senha para config.h
+#include "config.h" 
 
-// Caso queira manter hardcoded, ok. Mas melhor em config.h:
-#ifndef WIFI_SSID
-#define WIFI_SSID "MLPX2"
-#endif
-#ifndef WIFI_PASS
-#define WIFI_PASS "plx54321"
-#endif
+
+void startAP() {
+    WiFi.softAP(AP_SSID, AP_PASS);
+    Serial.print("AP IP address: ");
+    Serial.println(WiFi.softAPIP());
+}
 
 /**
  * Inicializa WiFi e backend HTTP (bloqueante até conectar).
@@ -30,7 +29,8 @@ void webinterface_setup() {
         setupWebRoutes();  // Configura todas as rotas HTTP
     } else {
         Serial.println("\nFalha ao conectar no WiFi!");
-        // Aqui poderia implementar fallback (ex: AP Mode)
+        startAP(); // Fallback AP Mode
+        setupWebRoutes();
     }
 }
 

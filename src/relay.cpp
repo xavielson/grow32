@@ -5,7 +5,7 @@
 /**
  * Pinos dos relés físicos (altere conforme seu hardware).
  */
-const int relayPins[NUM_PHYSICAL] = {16, 17, 18, 19, 21, 22, 23, 25};
+const int relayPins[NUM_PHYSICAL] = {16, 17, 18, 19, 4, 22, 23, 25};
 
 /**
  * Estados iniciais (todos desligados).

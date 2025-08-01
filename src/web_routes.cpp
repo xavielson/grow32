@@ -513,6 +513,64 @@ void handleImportAll() {
     server.send(200, "text/plain", "Backup restaurado com sucesso!");
 }
 
+void handleResetDevice() {
+    if (!server.hasArg("rele")) {
+        server.send(400, "text/plain", "Faltando parâmetro rele.");
+        return;
+    }
+    int idx = server.arg("rele").toInt();
+    if (idx < 0 || idx >= NUM_RELAYS) {
+        server.send(400, "text/plain", "Índice inválido");
+        return;
+    }
+
+    // 1. Limpa a configuração do relé
+    relays[idx] = RelayConfig{"", "", -1, 0};
+
+    // 2. Reseta o estado e modo manual
+    relayStates[idx] = false;
+    relayManual[idx] = false;
+
+    // 3. Apaga todos os agendamentos desse relé
+    scheduleCounts[idx] = 0;
+    for (int j = 0; j < MAX_EVENTS; j++) {
+        schedules[idx][j] = ScheduleEvent{}; // Zera (pode ser Schedule{...}, se precisar)
+    }
+    relayHasSchedule[idx] = false;
+
+    // 4. Persiste as alterações
+    storage_save_all(relays, NUM_RELAYS);
+
+    // 5. Retorna resposta
+    server.send(200, "text/plain", "Dispositivo e horários apagados.");
+}
+
+void handleResetSchedules() {
+    if (!server.hasArg("rele")) {
+        server.send(400, "text/plain", "Parâmetro 'rele' ausente!");
+        return;
+    }
+    int idx = server.arg("rele").toInt();
+    if (idx < 0 || idx >= NUM_RELAYS) {
+        server.send(400, "text/plain", "Índice inválido!");
+        return;
+    }
+
+    // Zera agendamentos deste relé
+    scheduleCounts[idx] = 0;
+    for (int j = 0; j < MAX_EVENTS; j++) {
+        // Limpa evento (assumindo struct zero-inicializável)
+        schedules[idx][j] = ScheduleEvent{};
+    }
+    updateRelayHasSchedule();
+
+    // Persiste
+    storage_save_all(relays, NUM_RELAYS);      // Se seu storage salva também os schedules juntos, ok    
+
+    server.send(200, "text/plain", "Agendamentos apagados");
+}
+
+
 void handleResetAll() {
     // Zera agendamentos
     for (int i = 0; i < NUM_RELAYS; i++) {
@@ -553,6 +611,8 @@ void setupWebRoutes() {
     server.on("/export_all", HTTP_GET, handleExportAll);
     server.on("/import_all", HTTP_POST, handleImportAll); 
     server.on("/reset_all", HTTP_POST, handleResetAll);
+    server.on("/reset_device", HTTP_POST, handleResetDevice);
+    server.on("/reset_schedules", HTTP_POST, handleResetSchedules);
     server.on("/delsched", handleDelSched);
 
     // Rota de debug (1/0) — sempre registrada
@@ -569,6 +629,10 @@ void setupWebRoutes() {
     #endif
 
     server.on("/setauto", handleSetAuto);
+
+    server.on("/favicon.ico", HTTP_GET, []() {
+        server.send(204); // No Content
+    });
 
     server.begin();
 }
