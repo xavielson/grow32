@@ -3,8 +3,8 @@
 #define CONFIG_H
 
 // --- WiFi principal (STA) ---
-#define WIFI_SSID     "MLPX"
-#define WIFI_PASS     "plx"
+#define WIFI_SSID     "CDL2"
+#define WIFI_PASS     "lualualua2"
 
 // --- WiFi fallback: Access Point ---
 #define AP_SSID       "xavisesp32"
