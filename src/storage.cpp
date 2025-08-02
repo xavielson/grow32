@@ -52,6 +52,7 @@ bool storage_save_all(RelayConfig relays[], size_t num_relays) {
             so["h_off"] = schedules[i][j].h_off;
             so["m_off"] = schedules[i][j].m_off;
             so["s_off"] = schedules[i][j].s_off;
+            so["isFlush"] = schedules[i][j].isFlush ? 1 : 0;
         }
     }
 

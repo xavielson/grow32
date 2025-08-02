@@ -30,6 +30,11 @@ struct ScheduleEvent {
     int dayOfWeek;  // 0=Todos, 1=Dom ... 7=Sab
     int h_on, m_on, s_on;
     int h_off, m_off, s_off;
+    bool isFlush;
+
+    ScheduleEvent() :
+        dayOfWeek(0), h_on(0), m_on(0), s_on(0),
+        h_off(0), m_off(0), s_off(0), isFlush(false) {}
 };
 
 extern ScheduleEvent schedules[NUM_RELAYS][MAX_EVENTS];

@@ -420,6 +420,8 @@ String getPage(bool debug) {
       z-index: 20;
       min-width: 330px;
       max-width: 99vw;
+      /* Evitar sobreposição do botão */
+      overflow: visible;
     }
     #modal-agendamentos h2 {
       margin: 0 0 13px 0;
@@ -429,7 +431,8 @@ String getPage(bool debug) {
       letter-spacing: 0.5px;
     }
     #modal-agendamentos label {
-      font-size: 15px;
+      line-height: 25px;
+      font-size: 13px;
       font-weight: 600;
       margin: 0;
       padding: 0;
@@ -461,7 +464,7 @@ String getPage(bool debug) {
       top: -4px;
     }
     #modal-agendamentos .add-sched-form select {
-      font-size: 15px;
+      font-size: 13px;
     }
     #modal-agendamentos input[type="text"],
     #modal-agendamentos input[type="number"] {
@@ -472,13 +475,20 @@ String getPage(bool debug) {
       border-radius: 5px;
       box-sizing: border-box;
     }
+    .sched-modal-header {
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-bottom: 0px;
+    }
     #schedDay {
       min-width: 80px !important;
       width: 80px !important;
-      height: 32px;
+      height: 25px;
       font-weight: 600;
-      font-size: 1em;
-      padding: 5px 3px;
+      font-size: 13px;
+      padding: 0px 3px;
       border: 1px solid #ccd6e1;
       border-radius: 7px;
       text-align: left;
@@ -493,11 +503,11 @@ String getPage(bool debug) {
       width: max-content;
       min-width: 0;
       list-style: none;
-      padding: 0;
+      padding-left: 2px;
       margin: 0 0 13px 0;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 8px;      
     }
     .sched-list li {
       display: flex;
@@ -545,11 +555,11 @@ String getPage(bool debug) {
     }
     .add-sched-form {
       display: flex;
-      flex-direction: column;
-      gap: 5px;
+      flex-direction: column;      
       align-items: flex-start;
       margin-top: 6px;
       margin-bottom: 9px;
+      gap: 3px;
     }
     .add-sched-form > div {
       display: flex;
@@ -677,6 +687,53 @@ String getPage(bool debug) {
     .manual-label:hover {
       background: #ffd2dc;
     }
+    /* === MODAL FLUSH === */
+    #flushBtn {
+      background: #445;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      box-shadow: 0 2px 10px #26b3c41a;
+      cursor: pointer;
+      z-index: 22;
+      transition: background .14s;
+      margin-right: 7px;
+      margin-top: 0;
+      /* Remova position absolute e top/right! */
+      position: static;
+    }
+    #flushBtn:hover {
+      background: #9ca3ad;
+    }
+
+    #modal-flush input[type="number"]::-webkit-inner-spin-button,
+    #modal-flush input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    #modal-flush input[type="number"] {
+      border: 1px solid #ccd6e1;
+      border-radius: 5px;
+      font-size: 15px;
+      padding: 3px 2px;
+      box-sizing: border-box;
+    }
+    #modal-flush select {
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid #ccd6e1;
+      border-radius: 7px;
+      padding: 2px 7px;
+    }
+    #modal-flush label[for="flushExecAgora"],
+    #modal-flush label[for="flushExecAgendar"] {
+      font-size: 14px;
+    }
+
+
   </style>
 </head>
 <body>
@@ -714,9 +771,12 @@ String getPage(bool debug) {
 
   <!-- ================== MODAL AGENDAMENTOS ================== -->
   <div id="modal-agendamentos">
+    <div class="sched-modal-header">
+      <button id="flushBtn" style="display:none;">Flush</button>
+    </div>
     <ul class="sched-list" id="schedList"></ul>
     <form class="add-sched-form" id="addSchedForm" autocomplete="off">
-      <div style="display:flex; align-items:center; gap:4px; margin-bottom:4px; margin-top:8px;">
+      <div style="display:flex; align-items:center; text-align:center; gap:4px; margin-top:10px; padding-left:69px;">
         <label for="schedDay" style="min-width:30px;">Dia:</label>
         <select id="schedDay">
           <option value="0">Todos</option>
@@ -747,7 +807,7 @@ String getPage(bool debug) {
           <input type="number" class="hr-input" id="schedSOff" min="0" max="59" placeholder="S" maxlength="2" required style="width:2.2em;text-align:center;">
         </div>
       </div>
-      <div class="schedBtns" style="display:flex; gap:12px; margin-top:2px;">
+      <div class="schedBtns" style="display:flex; gap:12px; margin-top:10px;">
         <button type="submit" style="background:#39f;color:#fff;" class="mainBtn">Adicionar</button>
         <button type="button" class="mainBtn" onclick="closeAgendamentoModal()">Fechar</button>
         <button type="button" class="mainBtn danger" id="apagarBtn">Apagar</button>
@@ -784,10 +844,79 @@ String getPage(bool debug) {
     </ul>
     <div class="schedBtns" style="display:flex; justify-content:center; gap:12px; margin-top:2px; padding-top:20px; padding-right:11px;">      
       <button type="button" class="mainBtn" onclick="closeWavemakerModal()">Fechar</button>
-      <button type="button" class="mainBtn danger" onclick="apagarDispositivoWavemaker()" id="apagarBtn">Apagar</button>
+      <button type="button" class="mainBtn danger" onclick="openConfirmApagarModal()" id="apagarBtn">Apagar</button>
     </div>
   </div>
   <div id="modal-bg-wavemaker" style="display:none;position:fixed;left:0;top:0;width:100vw;height:100vh;background:#0009;z-index:10;"></div>
+
+  <!-- Modal de confirmação para apagar dispositivo wavemaker -->
+  <div id="modal-confirm-apagar" style="display:none; position: fixed; left: 50%; top: 50%; 
+    transform: translate(-50%, -50%);
+    background: #fff;
+    padding: 24px 28px;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px #0009;
+    z-index: 50;
+    min-width: 280px;
+    text-align: center;
+  ">
+    <p style="font-weight: 600; font-size: 1.1em; margin-bottom: 16px;">
+      Tem certeza que deseja apagar este dispositivo?<br>
+      <small style="font-weight: 400; font-size: 0.9em; color: #555;">
+        Esta ação é irreversível!
+      </small>
+    </p>
+    <div style="display: flex; justify-content: center; gap: 12px;">
+      <button type="button" class="mainBtn" onclick="closeConfirmApagarModal()">Cancelar</button>
+      <button type="button" class="mainBtn danger" onclick="apagarDispositivoWavemaker()">Confirmar</button>
+    </div>
+  </div>
+  <div id="modal-bg-confirm-apagar" style="display:none; position: fixed; left: 0; top: 0; 
+    width: 100vw; height: 100vh; background: #0009; z-index: 49;">
+  </div>
+  <!-- ================== MODAL FLUSH (REGA) ================== -->
+  <div id="modal-flush" style="display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:#fff; z-index:120; min-width:320px; max-width:96vw; padding:28px 22px 18px 22px; border-radius:18px; box-shadow:0 8px 24px #0003;">
+    <form id="flushForm" autocomplete="off">
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin-bottom:13px; font-size: 11px;">
+        <span>Flush de</span>
+        <input type="number" id="flushQtd" min="1" max="99" maxlength="2" required style="width:2.4em; text-align:center;">
+        <span>regas de</span>
+        <input type="number" id="flushDur" min="1" max="99" maxlength="2" required style="width:2.4em; text-align:center;">
+        <span>minutos, intervalos de</span>
+        <input type="number" id="flushInt" min="1" max="99" maxlength="2" required style="width:2.4em; text-align:center;">
+        <span>minutos</span>
+      </div>
+      <div style="margin-bottom:8px; display:flex; flex-direction:column; gap:4px;">
+        <label style="display:flex; align-items:center; gap:7px; font-size:14px;">
+          <input type="radio" name="flushExec" value="agora" id="flushExecAgora" checked>
+          <span>Agora</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:7px; font-size:14px;">
+          <input type="radio" name="flushExec" value="agendar" id="flushExecAgendar">
+          <span>Dia:</span>
+          <select id="flushDia" style="min-width:72px;">
+            <option value="1">Dom</option>
+            <option value="2">Seg</option>
+            <option value="3">Ter</option>
+            <option value="4">Qua</option>
+            <option value="5">Qui</option>
+            <option value="6">Sex</option>
+            <option value="7">Sáb</option>
+          </select>
+          <span>às</span>
+          <input type="number" id="flushHora" min="0" max="23" maxlength="2" required style="width:2.2em; text-align:center;">
+          <input type="number" id="flushMin" min="0" max="59" maxlength="2" required style="width:2.2em; text-align:center;">
+          <input type="number" id="flushSec" min="0" max="59" maxlength="2" required style="width:2.2em; text-align:center;">
+        </label>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:18px; justify-content:center;">
+        <button type="submit" class="mainBtn" style="background:#21b4c5;">Confirmar</button>
+        <button type="button" class="mainBtn" onclick="closeFlushModal()">Fechar</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="modal-bg-flush" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:#0007; z-index:119;"></div>
 
   <!-- ================== MODAL SETTINGS/OPÇÕES ================== -->
   <div id="modal-settings" style="display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:white; z-index:40; min-width:320px; max-width:95vw; padding:22px 20px 20px 20px; border-radius:16px;">
@@ -1065,6 +1194,19 @@ String getPage(bool debug) {
       fetchAgendamentos(idx);
       // Para LED: esconde o campo de dia da semana
       const tipo = relayData[idx]?.type || "";
+      // Botao Flush
+      const flushBtn = document.getElementById('flushBtn');
+      const header = flushBtn.parentElement;
+      if (tipo === "Rega") {
+        flushBtn.style.display = "";
+        header.style.marginBottom = "10px";  // Espaço só quando tem botão
+        header.style.minHeight = "16px";    // Ou o valor exato do botão
+      } else {
+        flushBtn.style.display = "none";
+        header.style.marginBottom = "0";
+        header.style.minHeight = "0";
+      }
+
       const campoDia = document.querySelector('#addSchedForm [for="schedDay"]').parentElement;
       if (tipo === "Led" || tipo === "LED") {
         campoDia.style.display = "none";
@@ -1128,6 +1270,112 @@ String getPage(bool debug) {
         });
     };
 
+    // ================= MODAL FLUSH ===================
+    document.getElementById('flushBtn').onclick = function() {
+      document.getElementById('modal-bg-flush').style.display = 'block';
+      document.getElementById('modal-flush').style.display = 'block';
+    };
+    function closeFlushModal() {
+      document.getElementById('modal-bg-flush').style.display = 'none';
+      document.getElementById('modal-flush').style.display = 'none';
+    }
+    document.getElementById('modal-bg-flush').onclick = closeFlushModal;
+
+    document.querySelectorAll('#modal-flush input[type="number"]').forEach(function(input) {
+      input.addEventListener('input', function() {
+        this.value = this.value.replace(/[^\d]/g, '');
+        if (this.value.length > 2) {
+          this.value = this.value.slice(0, 2);
+        }
+      });
+    });
+
+    // Desabilita campos de dia/hora quando está "Agora" selecionado:
+    document.getElementById('flushExecAgora').onchange = function() {
+      document.getElementById('flushDia').disabled = true;
+      document.getElementById('flushHora').disabled = true;
+      document.getElementById('flushMin').disabled = true;
+      document.getElementById('flushSec').disabled = true;
+    };
+    document.getElementById('flushExecAgendar').onchange = function() {
+      document.getElementById('flushDia').disabled = false;
+      document.getElementById('flushHora').disabled = false;
+      document.getElementById('flushMin').disabled = false;
+      document.getElementById('flushSec').disabled = false;
+    };
+    // Inicia com campos desabilitados (modo "Agora" default)
+    document.getElementById('flushDia').disabled = true;
+    document.getElementById('flushHora').disabled = true;
+    document.getElementById('flushMin').disabled = true;
+    document.getElementById('flushSec').disabled = true;
+
+    function agendarFlush(idx) {
+      // Coletar os valores do modal:
+      const qtd = parseInt(document.getElementById('flushQtd').value, 10);
+      const dur = parseInt(document.getElementById('flushDur').value, 10);  // minutos
+      const intervalo = parseInt(document.getElementById('flushInt').value, 10);  // minutos
+
+      let startTime;
+      let dia;
+      if (document.getElementById('flushExecAgora').checked) {
+        const now = new Date();
+        startTime = now;
+        dia = now.getDay() + 1; // Domingo = 1 ... Sábado = 7 (ajuste para seu backend)
+      } else {
+        dia = parseInt(document.getElementById('flushDia').value, 10);
+        let h = parseInt(document.getElementById('flushHora').value, 10);
+        let m = parseInt(document.getElementById('flushMin').value, 10);
+        let s = parseInt(document.getElementById('flushSec').value, 10);
+        startTime = new Date();
+        startTime.setHours(h, m, s, 0);
+        // Ajustar dia para o selecionado (se precisar avançar até o dia correto)
+      }
+
+      let eventos = [];
+      let currTime = new Date(startTime);
+      for (let i = 0; i < qtd; i++) {
+        let liga = new Date(currTime);
+        let desliga = new Date(liga);
+        desliga.setMinutes(desliga.getMinutes() + dur);
+
+        eventos.push({
+          dia: dia,
+          h_on: liga.getHours(),
+          m_on: liga.getMinutes(),
+          s_on: liga.getSeconds(),
+          h_off: desliga.getHours(),
+          m_off: desliga.getMinutes(),
+          s_off: desliga.getSeconds(),
+          isFlush: 1
+        });
+
+        // Próxima rega começa após a anterior acabar + intervalo
+        currTime = new Date(desliga);
+        currTime.setMinutes(currTime.getMinutes() + intervalo);
+      }
+
+      // Fazer fetch para cada evento
+      let promessas = [];
+      eventos.forEach(ev => {
+        let params = `rele=${idx}&dia=${ev.dia}&h_on=${ev.h_on}&m_on=${ev.m_on}&s_on=${ev.s_on}` +
+                    `&h_off=${ev.h_off}&m_off=${ev.m_off}&s_off=${ev.s_off}&isFlush=1`;
+        promessas.push(fetch(`/addsched?${params}`));
+      });
+
+      // Fechar modal e atualizar interface depois de tudo
+      Promise.all(promessas).then(() => {
+        closeFlushModal();
+        fetchAgendamentos(idx);
+        fetchRelays();
+      });
+    }
+    document.getElementById('flushForm').onsubmit = function(ev) {
+      ev.preventDefault();
+      agendarFlush(agendamentoIdx); // Use o índice do relé/dispositivo sendo agendado
+    };
+
+
+
     // ================== MODAL APAGAR ==================
     document.getElementById("apagarBtn").onclick = function() {
       document.getElementById("modal-apagar").style.display = "block";
@@ -1147,8 +1395,6 @@ String getPage(bool debug) {
       fetch("/reset_device?rele=" + agendamentoIdx, {method:"POST"})
         .then(()=>{ closeApagarModal(); closeAgendamentoModal(); fetchRelays(); });
     }
-
-
 
     // ================== MODAL WAVEMAKER ==================
     let wavemakerIdx = null;
@@ -1182,15 +1428,26 @@ String getPage(bool debug) {
         });
     }
 
-    function apagarDispositivoWavemaker() {
-      console.log("Chamou!")
+    // ======= CONFIRMAÇAO DELETE WAVEMAKER ======= //
+    function openConfirmApagarModal() {
+      document.getElementById('modal-confirm-apagar').style.display = 'block';
+      document.getElementById('modal-bg-confirm-apagar').style.display = 'block';
+    }
+    function closeConfirmApagarModal() {
+      document.getElementById('modal-confirm-apagar').style.display = 'none';
+      document.getElementById('modal-bg-confirm-apagar').style.display = 'none';
+    }
+    function apagarDispositivoWavemaker() {      
       if (typeof wavemakerIdx !== "number") return;
       fetch("/reset_device?rele=" + wavemakerIdx, {method: "POST"})
         .then(() => {
-          closeWavemakerModal(); // Fecha só o modal do wavemaker
-          fetchRelays();              // Atualiza a lista de dispositivos
+          closeWavemakerModal();
+          closeConfirmApagarModal(); 
+          fetchRelays();         
         });
     }
+    document.getElementById('modal-bg-confirm-apagar').onclick = closeConfirmApagarModal;
+
 
     // ================== MODAL OPÇÕES / BACKUP/RESTORE ==================
     document.getElementById('settingsBtn').onclick = function() {

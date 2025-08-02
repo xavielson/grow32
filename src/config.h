@@ -3,8 +3,8 @@
 #define CONFIG_H
 
 // --- WiFi principal (STA) ---
-#define WIFI_SSID     "CDL2"
-#define WIFI_PASS     "lualualua2"
+#define WIFI_SSID     "MLPX2"
+#define WIFI_PASS     "plx54321"
 
 // --- WiFi fallback: Access Point ---
 #define AP_SSID       "xavisesp32"
@@ -13,6 +13,6 @@
 // --- Debug Mode ---
 #define DEBUG_MODE true
 
-#define CLEAN_START false // true para iniciar zerado
+#define CLEAN_START true // true para iniciar zerado
 
 #endif
