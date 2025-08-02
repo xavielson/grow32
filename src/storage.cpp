@@ -98,6 +98,7 @@ bool storage_load_all(RelayConfig relays[], size_t num_relays) {
                 s.h_off = so["h_off"] | 0;
                 s.m_off = so["m_off"] | 0;
                 s.s_off = so["s_off"] | 0;
+                s.isFlush = so["isFlush"] | 0;
             }
         }
     }

@@ -521,8 +521,11 @@ String getPage(bool debug) {
     }
     .sched-list .sched-info {
       display: flex;
-      gap: 17px;
       align-items: center;
+      gap: 6px;        /* Pequeno espaço entre hora e flush */
+      min-width: 255px;    /* Evita expansão */
+      max-width: 255px;/* Valor EXATO do conteúdo da linha */
+      position: relative;
     }
     .sched-list .sched-diasemana {
       font-size: 11px;
@@ -531,13 +534,33 @@ String getPage(bool debug) {
       min-width: 44px;
     }
     .sched-list .sched-horas {
+      width: 150px;    /* Fixo: sempre reserva esse espaço */
+      min-width: 150px;
+      max-width: 150px;
       font-family: monospace;
       letter-spacing: 1px;
       color: #295;
-      min-width: 98px;
       font-size: 1em;
       font-weight: 600;
+      text-align: left;
+      overflow: hidden;
+      white-space: nowrap;
     }
+    /* === FLUSH LABEL === */
+    .flush-label {
+      display: inline-block;
+      background: #21b4c5;
+      color: #fff;
+      font-weight: 500;
+      font-size: 0.71em;
+      border-radius: 4px;
+      padding: 1px 8px;
+      letter-spacing: 0.5px;
+      vertical-align: middle;
+      margin-left: 15px;
+      
+    }
+
     .sched-list button {
       background: #f55;
       color: #fff;
@@ -547,7 +570,7 @@ String getPage(bool debug) {
       font-size: 0.95em;
       font-weight: 600;
       cursor: pointer;
-      margin-left: 80px;
+      margin-left: 47px;
       transition: background .17s;
     }
     .sched-list button:hover {
@@ -734,6 +757,7 @@ String getPage(bool debug) {
     }
 
 
+
   </style>
 </head>
 <body>
@@ -910,7 +934,7 @@ String getPage(bool debug) {
         </label>
       </div>
       <div style="display:flex; gap:12px; margin-top:18px; justify-content:center;">
-        <button type="submit" class="mainBtn" style="background:#21b4c5;">Confirmar</button>
+        <button type="submit" class="mainBtn" style="background:#39f;">Confirmar</button>
         <button type="button" class="mainBtn" onclick="closeFlushModal()">Fechar</button>
       </div>
     </form>
@@ -954,6 +978,7 @@ String getPage(bool debug) {
     }
 
     // Atualiza status da linha do card (próximo evento, etc)
+
     function getStatusLinha(device) {
       if (typeof ntpTime === "undefined" || !ntpTime) return "Sincronizando horário...";
       if (device.type === "Wavemaker") {
@@ -966,7 +991,7 @@ String getPage(bool debug) {
       }
       if (!device.has_schedule || !device.horarios || device.horarios.length === 0) return "Sem agendamentos";
 
-      const diasSemana = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+      const diasSemana = ["Dom","Seg","Ter","Qua","Qui","Sex","Sab"];
       const diaAtual = ntpTime.weekday;
       const segundosAtuais = ntpTime.hour * 3600 + ntpTime.minute * 60 + ntpTime.second;
       let proximoEvento = null, menorDiferenca = 8 * 86400;
@@ -974,38 +999,58 @@ String getPage(bool debug) {
         const partes = (horaStr || "00:00:00").split(":").map(Number);
         return (partes[0]||0)*3600 + (partes[1]||0)*60 + (partes[2]||0);
       }
+
       device.horarios.forEach(ev => {
+        // Normalização do dia do evento
         let diasParaTestar = [];
+        console.log("Evento dia:", ev.dia, "diasParaTestar:", diasParaTestar, "Hoje (diaAtual):", diaAtual);
+        console.log("ev.dia valor bruto:", ev.dia, typeof ev.dia);
         if (ev.dia === "Todos") diasParaTestar = [0,1,2,3,4,5,6];
-        else if (typeof ev.dia === "number") diasParaTestar = [ev.dia];
-        else if (!isNaN(Number(ev.dia))) diasParaTestar = [Number(ev.dia)];
-        else {
+        else if (!isNaN(Number(ev.dia))) {
+          let diaNum = Number(ev.dia);
+          if (diaNum === 0) diasParaTestar = [0];
+          else if (diaNum >= 1 && diaNum <= 7) diasParaTestar = [(diaNum - 1)];
+          else diasParaTestar = [diaNum];
+        } else {
           let idx = diasSemana.indexOf(ev.dia);
           if (idx >= 0) diasParaTestar = [idx];
         }
+
         const temHOnHOff = ev.h_on && ev.h_off;
         const hOnSeg = horaParaSegundos(ev.h_on);
         const hOffSeg = horaParaSegundos(ev.h_off);
         const unicaHora = horaParaSegundos(ev.hora);
+
         diasParaTestar.forEach(idxDiaEv => {
           let diasAteEvento = idxDiaEv - diaAtual;
           if (diasAteEvento < 0) diasAteEvento += 7;
           const baseSegundos = diasAteEvento * 86400;
+          // --- PATCH PRINCIPAL AQUI ---
           if (temHOnHOff) {
             if (diasAteEvento === 0 && segundosAtuais < hOnSeg) {
+              // Evento ainda vai acontecer hoje
               const dif = baseSegundos + (hOnSeg - segundosAtuais);
               if (dif < menorDiferenca) {
                 menorDiferenca = dif;
                 proximoEvento = { acao: "liga", hora: ev.h_on, dia: idxDiaEv };
               }
             } else if (diasAteEvento === 0 && segundosAtuais >= hOnSeg && segundosAtuais < hOffSeg) {
+              // Evento está ocorrendo agora (entre liga e desliga)
               const dif = baseSegundos + (hOffSeg - segundosAtuais);
               if (dif < menorDiferenca) {
                 menorDiferenca = dif;
                 proximoEvento = { acao: "desliga", hora: ev.h_off, dia: idxDiaEv };
               }
             } else if (diasAteEvento !== 0) {
+              // Evento em outro dia
               const dif = baseSegundos + (hOnSeg - segundosAtuais);
+              if (dif < menorDiferenca) {
+                menorDiferenca = dif;
+                proximoEvento = { acao: "liga", hora: ev.h_on, dia: idxDiaEv };
+              }
+            } else {
+              // *** NOVO: Evento de hoje já passou, pega da próxima semana! ***
+              const dif = (7 * 86400) + (hOnSeg - segundosAtuais);
               if (dif < menorDiferenca) {
                 menorDiferenca = dif;
                 proximoEvento = { acao: "liga", hora: ev.h_on, dia: idxDiaEv };
@@ -1034,6 +1079,7 @@ String getPage(bool debug) {
       }
       return "Nenhum evento futuro encontrado.";
     }
+
 
     // Atualização de horário do relógio
     function fetchClock(cb) {
@@ -1223,7 +1269,7 @@ String getPage(bool debug) {
     function fetchAgendamentos(idx) {
       fetch('/getsched?rele=' + idx)
         .then(r=>r.json())
-        .then(js => {
+        .then(js => {          
           let html = '';
           const dias = ["Todos","Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
           js.forEach((ev, i) => {
@@ -1231,6 +1277,7 @@ String getPage(bool debug) {
                 <span class="sched-info">
                   <span class="sched-diasemana">${dias[ev.dia]}</span>
                   <span class="sched-horas">${pad2(ev.h_on)}:${pad2(ev.m_on)}:${pad2(ev.s_on)} ~ ${pad2(ev.h_off)}:${pad2(ev.m_off)}:${pad2(ev.s_off)}</span>
+                  ${ev.isFlush ? `<span class="flush-label">Flush</span>` : ""}
                 </span>
                 <button onclick="delAgendamento(${i})" title="Excluir">&#128465;</button>
               </li>`;

@@ -151,6 +151,7 @@ void handleGetSched() {
         js += ",\"h_off\":" + String(schedules[idx][i].h_off);
         js += ",\"m_off\":" + String(schedules[idx][i].m_off);
         js += ",\"s_off\":" + String(schedules[idx][i].s_off);
+        js += ",\"isFlush\":" + String(schedules[idx][i].isFlush ? 1 : 0);
         js += "}";
     }
     js += "]";    
@@ -167,9 +168,18 @@ void handleGetSched() {
  * Método: GET
  * Params: rele, dia, h_on, m_on, s_on, h_off, m_off, s_off
  */
-void handleAddSched() {
+void handleAddSched() {  
 
-    bool isFlush = (server.hasArg("isFlush") && server.arg("isFlush") == "1");
+    Serial.print("hasArg(isFlush): ");
+    Serial.println(server.hasArg("isFlush") ? "SIM" : "NÃO");
+    Serial.print("Valor arg(isFlush): ");
+    Serial.println(server.arg("isFlush"));
+
+    bool isFlush = (server.hasArg("isFlush") && server.arg("isFlush").toInt() == 1);
+
+    Serial.print("bool isFlush: ");
+    Serial.println(isFlush ? "SIM" : "NÃO");
+
 
     if (!server.hasArg("rele")) return server.send(400, "text/plain", "Faltou rele");
     int idx = server.arg("rele").toInt();
@@ -190,11 +200,15 @@ void handleAddSched() {
     ev.h_off = server.arg("h_off").toInt();
     ev.m_off = server.arg("m_off").toInt();
     ev.s_off = server.arg("s_off").toInt();
-    schedules[idx][scheduleCounts[idx]++] = ev;
-
-    relayHasSchedule[idx] = true;
-
     ev.isFlush = isFlush;
+
+    Serial.print("ev.isFlush salvo: ");
+    Serial.println(ev.isFlush ? "SIM" : "NÃO");
+
+    schedules[idx][scheduleCounts[idx]++] = ev;
+    relayHasSchedule[idx] = true;    
+
+
 
     storage_save_all(relays, NUM_RELAYS);
     server.send(200, "text/plain", "OK");
